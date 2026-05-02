@@ -1,0 +1,70 @@
+{% load static %}
+  
+    
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{%static 'css/style.css'%}">
+    <title>Modifier Agent</title>
+</head>
+<body>
+
+<h2>Modifier un agent</h2>
+<div class="container">
+<form method="POST" action="{% url 'modifier_agent' id_agent=agent.id_user.id_user %}">
+    {% csrf_token %}
+
+    <!-- ID caché -->
+    <input type="hidden" name="id_agent" value="{{ agent.id_user.id_user }}">
+
+    <div class="form_group">
+        <label>Nom :</label>
+        <input type="text" name="nom_user" value="{{ agent.id_user.nom_user }}">
+    </div>
+
+    <div class="form_group">
+        <label>Prénom :</label>
+        <input type="text" name="prenom_user" value="{{ agent.id_user.prenom_user }}">
+    </div>
+
+    <div class="form_group">
+        <label>Email :</label>
+        <input type="email" name="email" value="{{ agent.id_user.email }}">
+    </div>
+
+    <div class="form_group">
+        <label>Matricule :</label>
+        <input type="text" name="matricule" value="{{ agent.matricule }}">
+    </div>
+
+   <div class="form_group">
+    <label>Choisir un arrondissement :</label>
+    <select name="id_arondissement">
+
+        {% regroup arrondissements by id_commune.nom_commune as communes_grouped %}
+
+        {% for group in communes_grouped %}
+            <optgroup label="{{ group.grouper }}">
+                
+                {% for c in group.list %}
+                    <option value="{{ c.id_arondissement }}"
+                        {% if c.id_arondissement == agent.id_user.id_arondissement.id_arondissement %}
+                            selected
+                        {% endif %}
+                    >
+                        Arrondissement {{ c.num_arondissement }}
+                    </option>
+                {% endfor %}
+                
+            </optgroup>
+        {% endfor %}
+
+    </select>
+
+</div>
+    <button type="submit">Modifier</button>
+
+</form>
+</div>
+</body>
+</html>

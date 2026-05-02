@@ -1,0 +1,9 @@
+{%load static%}
+<link rel="stylesheet" type="text/css" href="{%static 'css/style.css'%}">
+  {% for utilisateur in context.utilisateurs %}
+    <div>
+            <div>{{ utilisateur.nom_user }}</div>
+            <div>{{ utilisateur.prenom_user }}</div>
+            <div>{{ utilisateur.email }}</div>
+    </div>
+    {% endfor %}

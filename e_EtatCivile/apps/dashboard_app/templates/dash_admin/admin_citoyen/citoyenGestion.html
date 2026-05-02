@@ -1,0 +1,19 @@
+{%load static%}
+<link rel="stylesheet" type="text/css" href="{%static 'css/style.css'%}">
+  {% for citoyen in context.citoyens %}
+    <div class="container">
+            <div>nom: {{ citoyen.id_user.nom_user }}</div>
+            <div>prenom:{{ citoyen.id_user.prenom_user }}</div>
+            <div> email: {{ citoyen.id_user.email }}</div>
+            <div>arrondissement:{{ citoyen.id_user.id_arondissement.num_arondissement }}</div>
+            <div>nbre de demande envoyé:{{citoyen.nb_demandes}}</div>
+            <div>Payé: {{citoyen.total_paiement|default:"0"}} </div>
+            <div>Dernier date de demande:{{citoyen.derniere_demande|default:"Aucun"}} </div>
+            <div>Agent responsable du dernier demande:{{citoyen.id_user.id_agent.id_user.nom_user}} {{citoyen.id_user.id_agent.id_user.prenom_user}}</div>
+            <a href="{% url 'supprimer_citoyen' id_citoyen=citoyen.id_user.id_user %}">supprimer</a>
+            {% comment %} <a href="{% url 'modifier_citoyen' id_citoyen=citoyen.id_user.id_user %}">modifier</a> {% endcomment %}
+      </div>
+    {% endfor %}
+    
+    
+           

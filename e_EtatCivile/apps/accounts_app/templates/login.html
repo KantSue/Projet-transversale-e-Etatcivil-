@@ -1,0 +1,23 @@
+{%load static%}
+<link rel="stylesheet" type="text/css" href="{%static 'css/style.css'%}">
+  
+    <div class="container">
+    <form action="{% url 'login' %}" method="post" class="auth_form">
+        {% csrf_token %}
+        
+        <div class="form_group">
+            <label>Email :</label>
+            <input type="email" name="email" placeholder="Email">
+        </div>
+
+        <div class="form_group">
+            <label>Mot de passe :</label>
+            <input type="password" name="mdp_user" placeholder="Mot de passe">
+        </div>
+        
+        
+        <button type="submit" >Se connecter</button>
+    <div><a href="{% url 'register2'%}">S'inscrire</a></div>
+
+    </form>
+</div>

@@ -1,0 +1,19 @@
+{%load static%}
+<link rel="stylesheet" type="text/css" href="{%static 'css/style.css'%}">
+  {% for agent in context.agents %}
+    <div class="container">
+            <div>nom: {{ agent.id_user.nom_user }}</div>
+            <div>prenom:{{ agent.id_user.prenom_user }}</div>
+            <div> email: {{ agent.id_user.email }}</div>
+            <div>matricule:{{ agent.matricule }}</div>
+            <div>arrondissement:{{ agent.id_user.id_arondissement.num_arondissement }}</div>
+            <div>nbre de demande traitées:{{agent.nb_demande}}</div>
+            <div>nbre de demande validée:{{agent.demande_valider}}</div>
+            <a href="{% url 'supprimer_agent' id_agent=agent.id_user.id_user %}">supprimer</a>
+            <a href="{% url 'modifier_agent' id_agent=agent.id_user.id_user %}">modifier</a>
+      </div>
+    {% endfor %}
+    
+    
+           
+    <a href="{% url 'ajouter_agent' %}">Ajouter un agent</a>

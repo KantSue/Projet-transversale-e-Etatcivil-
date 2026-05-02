@@ -1,0 +1,42 @@
+{%load static%}
+<link rel="stylesheet" type="text/css" href="{%static 'css/style.css'%}">
+    <div>
+           <div class="container">
+    <form action="/" method="post" class="auth_form">
+        {% csrf_token %}
+        
+         <div class="form_group">
+            <label>Nom :</label>
+            {{form.nom_user}}
+        </div>
+
+        <div class="form_group">
+            <label>Prénom :</label>
+            {{form.prenom_user}}
+        </div>
+
+        <div class="form_group">
+            <label>Email :</label>
+             {{form.email}}
+        </div>
+
+        <div class="form_group">
+            <label>Mot de passe :</label>
+             {{form.mdp_user}}
+        </div>
+        <div class="form_group">
+            <label>Matricule :</label>
+            {{form2.matricule}}
+        </div>
+        <div class="form_group">
+            <label>commune :</label>
+            {{form2.id_arondissement}}
+        </div>
+        <div class="form_group">
+            <label>role :</label>
+            {{form.role}}
+        </div>
+        <button type="submit" >S'inscrire</button>
+    </form>
+</div>
+    </div>

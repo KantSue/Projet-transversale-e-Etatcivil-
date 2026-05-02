@@ -1,0 +1,103 @@
+{%load static%}
+
+<div style="padding:20px;">
+
+    <h2>📂 File d'attente des demandes</h2>
+
+    <!-- 🔎 FILTRE -->
+    <form method="POST"  style="margin-bottom:20px;">
+        {% csrf_token %}
+
+        <label>Type de demande :</label>
+        <select name="type_demande">
+            <option value="">Tous</option>
+            <option value="naissance" {% if type_demande == "naissance" %}selected{% endif %}>Naissance</option>
+            <option value="mariage" {% if type_demande == "mariage" %}selected{% endif %}>Mariage</option>
+            <option value="deces" {% if type_demande == "deces" %}selected{% endif %}>Décès</option>
+        </select>
+
+        <button type="submit">Filtrer</button>
+    </form>
+
+    <!-- 📊 STATISTIQUES -->
+    <div style="display:flex; gap:20px; margin-bottom:30px;">
+        
+        <div style="flex:1; background:#fff3cd; padding:20px; border-radius:10px;">
+            <h4>🟡 En attente</h4>
+            <h2>{{ stats.en_attente|default:0 }}</h2>
+        </div>
+
+        <div style="flex:1; background:#d4edda; padding:20px; border-radius:10px;">
+            <h4>🟢 Validées</h4>
+            <h2>{{ stats.valider|default:0 }}</h2>
+        </div>
+
+        <div style="flex:1; background:#f8d7da; padding:20px; border-radius:10px;">
+            <h4>🔴 Refusées</h4>
+            <h2>{{ stats.refuser|default:0 }}</h2>
+        </div>
+
+    </div>
+
+    <!-- 📋 TABLE -->
+    <h3>📌 Demandes à traiter</h3>
+
+    <table border="1" cellpadding="10" cellspacing="0" style="width:100%; background:white;">
+        <thead style="background:#343a40; color:white;">
+            <tr>
+                <th>ID</th>
+                <th>Citoyen</th>
+                <th>Type</th>
+                <th>Date dépôt</th>
+                <th>Statut</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for d in A_traiter %}
+            <tr>
+                <td>{{ d.id_demande }}</td>
+
+                <td>
+                    {{ d.id_citoyen.id_user.nom_user }}
+                    {{ d.id_citoyen.id_user.prenom_user }}
+                </td>
+
+                <td>{{ d.type_acte }}</td>
+
+                <td>{{ d.date_depot|date:"d/m/Y" }}</td>
+
+                <td>
+                    <span style="color:orange; font-weight:bold;">
+                        {{ d.statut_demande }}
+                    </span>
+                </td>
+
+                <td>
+                    <a href=# 
+                       style="color:green; text-decoration:none;">
+                       ✅ Valider
+                    </a>
+
+                    |
+
+                    <a href=# 
+                       style="color:red; text-decoration:none;">
+                       ❌ Refuser
+                    </a>
+                </td>
+            </tr>
+
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align:center;">
+                    🚫 Aucune demande en attente
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+

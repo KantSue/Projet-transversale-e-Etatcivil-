@@ -1,0 +1,24 @@
+{%load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{%static 'css/style.css'%}">
+
+    <title>Dashboard Admin</title>
+</head>
+<body>
+    <div>
+        <a href="{% url 'logout' %}">Se déconnecter</a>
+        <a href="{% url 'services' %}">Services</a>
+    </div>
+    
+
+    <div class="container">
+        <h1>Bienvenue ,{{user.role}} {{user.nom_user}} {{user.prenom_user}} 😎</h1>
+    </div>
+</body>
+</html>
+  
+    

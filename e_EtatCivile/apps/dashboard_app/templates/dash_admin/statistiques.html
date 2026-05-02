@@ -1,0 +1,158 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Admin</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+            margin: 0;
+            font-size: 14px;
+            color: gray;
+        }
+
+        .card p {
+            font-size: 22px;
+            margin-top: 10px;
+        }
+
+        .filter {
+            margin: 20px 0;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        canvas {
+            background: white;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        button {
+            padding: 8px 15px;
+            border: none;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        select {
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>📊 Dashboard Administrateur</h1>
+
+<!-- 🔎 FILTRE -->
+<div class="filter">
+    <form method="POST">
+        {% csrf_token %}
+
+        <label>Mois :</label>
+        <select name="mois">
+            <option value="">--Choisir--</option>
+            <option value="1">Janvier</option>
+            <option value="2">Février</option>
+            <option value="3">Mars</option>
+            <option value="4">Avril</option>
+            <option value="5">Mai</option>
+            <option value="6">Juin</option>
+            <option value="7">Juillet</option>
+            <option value="8">Août</option>
+            <option value="9">Septembre</option>
+            <option value="10">Octobre</option>
+            <option value="11">Novembre</option>
+            <option value="12">Décembre</option>
+        </select>
+
+        <label>Année :</label>
+        <select name="annee">
+            <option value="">--Choisir--</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+        </select>
+
+        <button type="submit">Filtrer</button>
+    </form>
+</div>
+
+<!-- 📊 CARDS -->
+<div class="cards">
+    <div class="card">
+        <h3>Citoyens</h3>
+        <p>{{ citoyens }}</p>
+    </div>
+
+    <div class="card">
+        <h3>Demandes totales</h3>
+        <p>{{ demande_globale }}</p>
+    </div>
+
+    <div class="card">
+        <h3>Demandes validées</h3>
+        <p>{{ demande_valider }}</p>
+    </div>
+
+    <div class="card">
+        <h3>Total Collecté</h3>
+        <p>{{ collectes }} Ar</p>
+    </div>
+</div>
+
+<!-- 📈 GRAPHIQUE -->
+<canvas id="chartDemande"></canvas>
+
+<script>
+const ctx = document.getElementById('chartDemande');
+
+const chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ['Total', 'Validées'],
+        datasets: [{
+            label: 'Statistiques des demandes',
+            data: [
+                {{ demande_globale|default:0 }},
+                {{ demande_valider|default:0 }}
+            ]
+        }]
+    }
+});
+</script>
+
+</body>
+</html>

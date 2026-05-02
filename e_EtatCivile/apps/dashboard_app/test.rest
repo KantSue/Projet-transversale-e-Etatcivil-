@@ -1,0 +1,57 @@
+
+GET http://127.0.0.1:8000/dashboard/demandes/
+Content-Type: application/json
+
+###
+PUT http://127.0.0.1:8000/dashboard/agents/1
+Content-Type: application/json
+
+{
+    
+    nom_user:"test"
+}
+###
+POST http://127.0.0.1:8000/dashboard/agents/
+Content-Type: application/json
+
+{
+    "matricule": 10001,
+    "nom_user": "Rakoto",
+    "prenom_user": "Tina",
+    "email": "tina@gmail.com",
+    "role": "Agent"
+    
+}
+
+
+###
+POST   http://127.0.0.1:8000/dashboard/demandes/
+Content-Type: application/json
+
+{
+  "type_acte": 1,
+  "num_acte": "NAISS-001",
+  "id_citoyen": 10,
+  "id_commune": 2,
+
+  "pere-nom_personne": "Rakoto",
+  "pere-prenom_personne": "Jean",
+  "pere-date_naissance": "1980-05-10",
+  "pere-lieu_naiss": "Tana",
+  "pere-sexe": "M",
+  "pere-profession": "Ingénieur",
+
+  "mere-nom_personne": "Rabe",
+  "mere-prenom_personne": "Marie",
+  "mere-date_naissance": "1985-01-01",
+  "mere-lieu_naiss": "Tamatave",
+  "mere-sexe": "F",
+  "mere-profession": "Médecin",
+
+  "enfant-nom_personne": "Rakoto",
+  "enfant-prenom_personne": "Junior",
+  "enfant-date_naissance": "2026-01-01",
+  "enfant-lieu_naiss": "Tana",
+  "enfant-sexe": "M",
+  "enfant-profession": "etudiant"
+}

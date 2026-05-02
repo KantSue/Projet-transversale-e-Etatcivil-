@@ -1,0 +1,56 @@
+{%load static%}
+<link rel="stylesheet" type="text/css" href="{%static 'css/style.css'%}">
+  
+    <div class="container">
+    <form action="{% url 'register2'%}" method="post" class="auth_form">
+        {% csrf_token %}
+        
+        <div class="form_group">
+            <label>Nom :</label>
+            <input type="text" name="nom_user" placeholder="Nom">
+        </div>
+
+        <div class="form_group">
+            <label>Prénom :</label>
+            <input type="text" name="prenom_user" placeholder="Prénom">
+        </div>
+
+        <div class="form_group">
+            <label>Email :</label>
+            <input type="email" name="email" placeholder="Email">
+        </div>
+
+        <div class="form_group">
+            <label>Mot de passe :</label>
+            <input type="password" name="mdp_user" placeholder="Mot de passe">
+        </div>
+        
+        <div class="form_group">
+            <label>commune :</label>
+            <select name="id_arondissement">
+
+        {% regroup arrondissements by id_commune.nom_commune as communes_grouped %}
+
+        {% for group in communes_grouped %}
+            <optgroup label="{{ group.grouper }}">
+                
+                {% for c in group.list %}
+                    <option value="{{ c.id_arondissement }}"
+                        {% if c.id_arondissement == agent.id_user.id_arondissement.id_arondissement %}
+                            selected
+                        {% endif %}
+                    >
+                        Arrondissement {{ c.num_arondissement }}
+                    </option>
+                {% endfor %}
+                
+            </optgroup>
+        {% endfor %}
+
+    </select>
+        </div>
+        <button type="submit" >S'inscrire</button>
+    <div><a href="{% url 'login'%}">se connecter</a></div>
+
+    </form>
+</div>
