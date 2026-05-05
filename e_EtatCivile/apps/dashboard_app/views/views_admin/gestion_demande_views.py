@@ -3,12 +3,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from apps.dashboard_app.serializers import (
-    DemandeRefuSerializer,
+    DemandeRefuSerializer,JournalSerializer,
     DemandeAccepteSerializer,DemandeReadSerializer,
     DemandePersonneSerializer, PersonneSerializer, DemandeCreateSerializer,DemandeSerializer,DemandeHeapSerializer
 )
 from apps.dashboard_app.form import PersonneForm
-from apps.dashboard_app.models import Demande,DemandePersonne,Personne
+from apps.dashboard_app.models import Demande,DemandePersonne,Personne,JournalAudit
 from apps.dashboard_app.services.demande_service import *
 class DemandeActeNaissViews(APIView):
     def post(self, request):
@@ -45,30 +45,34 @@ class DemandeActeNaissViews(APIView):
         serializer = DemandeReadSerializer(result, many=True)
         
         return Response(serializer.data, status=200)
-class ReponseDemandeActeViews(APIView):
-    def get(self,request,demande_id):
+
+    def patch(self, request, id_agent, id_demande):
+        action = request.data.get('action')
+        motif  = request.data.get('motif')
+
+        
         try:
-            demande=Demande.objects.filter(id_demande=demande_id)
-            if not demande.exists():
-                return Response({"message": "Demande non trouvée"},status=status.HTTP_404_NOT_FOUND)
-            serializer=DemandeSerializer(demande.first())
-            return Response(serializer.data,status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"message": "Erreur lors de la récupération de la demande", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    def post(self,request,demande_id):
-        try:
-            motif_refut=request.POST.get('motif_refut')
-            statut_demande=request.POST.get('statut_demande')
-            if motif_refut:
-               serializer=DemandeRefuSerializer(data={'motif_refus':motif_refut,'statut_demande':statut_demande})
-               if not serializer.is_valid():
-                  return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-            serializer=DemandeAccepteSerializer(data={'statut_demande':statut_demande, 'id_demande':demande_id})
-            return Response({"message":"Demande refusée avec succès"},status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"message":"Erreur d'envoie","detail":str(e)},status=status.HTTP_400_BAD_REQUEST)
-            
+            demande = Demande.objects.get(id_demande=id_demande)
+        except Demande.DoesNotExist:
+            return Response({"error": "Demande introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+       
+        serializer = JournalSerializer(data={
+            'demande' : demande.id_demande,
+            'agent'   : id_agent,
+            'action'  : action,
+            'motif'   : motif or ''
+        })
+
+        if serializer.is_valid():
+            journal = serializer.save()
+            return Response({
+                "message" : f"Demande {action.lower()} avec succès.",
+                "journal" : journal.id_journal,
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 ###dECES
 class DemandeActeDecesViews(APIView):
     def post(self, request):

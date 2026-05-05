@@ -352,3 +352,27 @@ class Utilisateur(models.Model):
     class Meta:
         managed = False
         db_table = 'utilisateur'
+
+class JournalAudit(models.Model):
+
+    ACTION_CHOICES = [
+        ('CONSULTER', 'Consulter'),
+        ('VALIDER', 'Valider'),
+        ('REFUSER', 'Refuser'),
+    ]
+
+    id_journal = models.BigAutoField(primary_key=True)
+    demande =  models.ForeignKey(Demande, models.DO_NOTHING, db_column='id_demande', blank=True, null=True)
+    agent =  models.ForeignKey(Agent, models.DO_NOTHING, db_column='id_agent', blank=True, null=True)
+
+    action = models.CharField(
+        max_length=20,
+        choices=ACTION_CHOICES
+    )
+
+    motif = models.TextField(blank=True, null=True)
+    horodatage = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'journal_audit'

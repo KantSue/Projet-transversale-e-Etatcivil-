@@ -8,7 +8,7 @@ from .models import (
     Acte, ActeDeces, ActeMariage, ActeNaissance, ActePersonne,
     Administrateur, Agent, Archive, Arondissement, Citoyen, Commune,
     Declaration, DeclarationPiece, Demande, Paiement, Personne,
-    PieceJoint, DemandePersonne, TypeActe, Utilisateur
+    PieceJoint, DemandePersonne, TypeActe, Utilisateur,JournalAudit
 )
 
 class NbDemande_DemandeValider(serializers.ModelSerializer):
@@ -263,6 +263,8 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
         mere_data=validated_data.pop('mere')
         enfant_data=validated_data.pop('enfant')
         validated_data['num_demande']=generer_num_demande()
+        validated_data.setdefault('statut_demande', 'en attente')
+
         pere=Personne.objects.create(**pere_data)
         mere=Personne.objects.create(**mere_data)
         enfant=Personne.objects.create(**enfant_data)
@@ -273,6 +275,7 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
         DemandePersonne.objects.create(demande=demande, personne=mere, role='mere')
         DemandePersonne.objects.create(demande=demande, personne=enfant, role='enfant')
         return demande
+
 
 class DemandeReadSerializer(serializers.ModelSerializer):
     personnes = DemandePersonneSerializer(
@@ -346,7 +349,54 @@ class PieceJointSerializer(serializers.ModelSerializer):
     class Meta:
         model = PieceJoint
         fields = '__all__'
+class JournalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JournalAudit
+        fields = '__all__'
+        read_only_fields = ['id_journal','id_demande','id_agent']
 
+    # Dans le JournalSerializer
+    def create(self, validated_data):
+        action  = validated_data.get('action')
+        motif   = validated_data.get('motif')
+        demande = validated_data.get('demande')
+
+        if action == 'REFUSER' and not motif:
+            raise serializers.ValidationError("Le motif est requis pour refuser une demande.")
+
+        dernier_journal = JournalAudit.objects.filter(demande=demande).last()
+
+        if dernier_journal:
+            dernier_action = dernier_journal.action
+
+            if dernier_action in ['VALIDER', 'REFUSER']:
+                raise serializers.ValidationError(
+                    f"La demande a déjà été {dernier_action.lower()}e et ne peut plus être modifiée."
+                )
+
+            if dernier_action == 'CONSULTER' and action == 'CONSULTER':
+                raise serializers.ValidationError(
+                    "La demande est déjà en cours de consultation."
+                )
+
+        if action == 'CONSULTER':
+            demande.statut_demande = 'EN COURS'
+
+        elif action == 'VALIDER':
+            demande.statut_demande = 'VALIDER'
+
+        elif action == 'REFUSER':
+            demande.statut_demande = 'REFUSER'
+            demande.motif_refus    = motif
+
+        else:
+            raise serializers.ValidationError(f"Action '{action}' non reconnue.")
+
+        demande.save()
+
+        # Création du journal
+        journal = JournalAudit.objects.create(**validated_data)
+        return journal
 
 # class StatistiqueSerializer(serializers.ModelSerializer):
 #     id_admin = AdministrateurSerializer(read_only=True)

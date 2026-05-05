@@ -22,6 +22,14 @@ Content-Type: application/json
     "role": "Agent"
     
 }
+###
+PATCH  http://127.0.0.1:8000/dashboard/demandes/9/7/
+Content-Type: application/json
+
+{
+    "action": "REFUSER",
+    "motif": "manque de photo de cin"
+}
 
 
 ###
