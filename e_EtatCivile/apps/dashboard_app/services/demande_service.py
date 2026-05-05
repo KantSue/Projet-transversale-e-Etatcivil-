@@ -1,7 +1,6 @@
 
 from datetime import datetime
 
-
 def plus_ancienne(d1, d2):
     return d1.date_depot < d2.date_depot
 
@@ -67,3 +66,36 @@ def heap_sort_demandes(demandes):
         result.append(extract_min(demandes))
 
     return result
+import heapq
+
+def construire_file_priorite(demandes):
+    heap = []
+
+    for d in demandes:
+        # priorité = date la plus ancienne
+        heapq.heappush(heap, (d.date_depot, d))
+
+    return heap
+def traiter_demande(heap):
+    if not heap:
+        return None
+
+    _, demande = heapq.heappop(heap)
+    return demande
+from django.utils import timezone
+from apps.dashboard_app.models import Demande
+
+def generer_num_demande():
+    annee = timezone.now().year
+
+    last_demande = Demande.objects.filter(
+        num_demande__startswith=f"DEM-{annee}"
+    ).order_by('-num_demande').first()
+
+    if last_demande:
+        last_num = int(last_demande.num_demande.split('-')[-1])
+        new_num = last_num + 1
+    else:
+        new_num = 1
+
+    return f"DEM-{annee}-{new_num:04d}"

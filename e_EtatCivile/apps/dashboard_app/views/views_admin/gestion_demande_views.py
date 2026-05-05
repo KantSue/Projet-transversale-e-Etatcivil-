@@ -3,101 +3,72 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from apps.dashboard_app.serializers import (
+    DemandeRefuSerializer,
+    DemandeAccepteSerializer,DemandeReadSerializer,
     DemandePersonneSerializer, PersonneSerializer, DemandeCreateSerializer,DemandeSerializer,DemandeHeapSerializer
 )
 from apps.dashboard_app.form import PersonneForm
-from apps.dashboard_app.models import Demande,DemandePersonne
+from apps.dashboard_app.models import Demande,DemandePersonne,Personne
 from apps.dashboard_app.services.demande_service import *
 class DemandeActeNaissViews(APIView):
     def post(self, request):
+        serializer = DemandeCreateSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Demande créée"}, status=201)
+
+        return Response(serializer.errors, status=400)
+    def get(self, request, id_demande=None):
+
+        # --- GET ONE ---
+        if id_demande is not None:
+            try:
+                demande = Demande.objects.prefetch_related(
+                    'demandepersonne__personne'
+                ).get(id_demande=id_demande)
+            except Demande.DoesNotExist:
+                return Response({"message": "Demande introuvable"}, status=404)
+            
+            serializer = DemandeReadSerializer(demande)
+            return Response(serializer.data, status=200)
+
+        # --- GET ALL ---
+        demandes = list(Demande.objects.prefetch_related('demandepersonne__personne').filter(statut_demande='en attente'))
+
+        heap = construire_file_priorite(demandes)
+
+        result = []
+        while heap:
+            result.append(traiter_demande(heap))
+
+        serializer = DemandeReadSerializer(result, many=True)
         
-        pere_form   = PersonneForm(request.data, prefix='pere')
-        mere_form   = PersonneForm(request.data, prefix='mere')
-        enfant_form = PersonneForm(request.data, prefix='enfant')
-
-        type_acte  = request.data.get('type_acte')
-        num_acte   = request.data.get('num_acte')
-        id_citoyen = request.data.get('id_citoyen')
-        id_commune = request.data.get('id_commune')
-
-        # Validation préliminaire
-        if not (pere_form.is_valid() and mere_form.is_valid() and enfant_form.is_valid()):
-            return Response({
-                "message": "Formulaires invalides",
-                "errors": {
-                    "pere":   pere_form.errors,
-                    "mere":   mere_form.errors,
-                    "enfant": enfant_form.errors,
-                }
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        if not type_acte or not int(type_acte) > 0 or not num_acte:
-            return Response({"message": "type_acte ou num_acte invalide"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Validation des serializers personnes
-        serializer_pere   = PersonneSerializer(data=pere_form.cleaned_data)
-        serializer_mere   = PersonneSerializer(data=mere_form.cleaned_data)
-        serializer_enfant = PersonneSerializer(data=enfant_form.cleaned_data)
-
-        if not (serializer_pere.is_valid() and serializer_mere.is_valid() and serializer_enfant.is_valid()):
-            return Response({
-                "message": "Données personnes invalides",
-                "errors": {
-                    "pere":   serializer_pere.errors,
-                    "mere":   serializer_mere.errors,
-                    "enfant": serializer_enfant.errors,
-                }
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer_demande = DemandeCreateSerializer(data={
-            'id_type_acte': type_acte,
-            'num_acte':     num_acte,
-            'id_commune':   id_commune,
-            'id_citoyen':   id_citoyen,
-        })
-
-        if not serializer_demande.is_valid():
-            return Response({
-                "message": "Données demande invalides",
-                "errors": serializer_demande.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        # Sauvegarde atomique
+        return Response(serializer.data, status=200)
+class ReponseDemandeActeViews(APIView):
+    def get(self,request,demande_id):
         try:
-            with transaction.atomic():
-                pere_instance   = serializer_pere.save()
-                mere_instance   = serializer_mere.save()
-                enfant_instance = serializer_enfant.save()
-                demande         = serializer_demande.save()
-
-                for instance, role in [(pere_instance,   'pere'),(mere_instance,   'mere'),(enfant_instance, 'enfant'),]:
-                    s = DemandePersonneSerializer(data={
-                        'id_personne': instance.pk,
-                        'id_demande':  demande.pk,
-                        'role':        role,
-                    })
-                    if not s.is_valid():
-                        raise ValueError(s.errors)
-                    s.save()
-
+            demande=Demande.objects.filter(id_demande=demande_id)
+            if not demande.exists():
+                return Response({"message": "Demande non trouvée"},status=status.HTTP_404_NOT_FOUND)
+            serializer=DemandeSerializer(demande.first())
+            return Response(serializer.data,status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({"message": "Erreur lors de la sauvegarde", "detail": str(e)},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        return Response({"message": "Demande créée avec succès"}, status=status.HTTP_201_CREATED)
+            return Response({"message": "Erreur lors de la récupération de la demande", "detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    
-    def get(self, request):
-        demandes = list(
-                Demande.objects
-                .filter(statut_demande='en attente')
-                .prefetch_related('demande_personne__id_personne')
-            )        
-        demandes_triees = heap_sort_demandes(demandes)
-
-        serializer = DemandeSerializer(demandes_triees, many=True)
-
-        return Response({"demandes": serializer.data}, status=200)
+    def post(self,request,demande_id):
+        try:
+            motif_refut=request.POST.get('motif_refut')
+            statut_demande=request.POST.get('statut_demande')
+            if motif_refut:
+               serializer=DemandeRefuSerializer(data={'motif_refus':motif_refut,'statut_demande':statut_demande})
+               if not serializer.is_valid():
+                  return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+            serializer=DemandeAccepteSerializer(data={'statut_demande':statut_demande, 'id_demande':demande_id})
+            return Response({"message":"Demande refusée avec succès"},status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"message":"Erreur d'envoie","detail":str(e)},status=status.HTTP_400_BAD_REQUEST)
+            
 ###dECES
 class DemandeActeDecesViews(APIView):
     def post(self, request):

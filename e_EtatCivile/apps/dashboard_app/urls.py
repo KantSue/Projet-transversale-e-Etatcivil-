@@ -12,7 +12,9 @@ routeur.register(r'utilisateurs',gestion_citoyens_views.UtilisateurView,basename
 urlpatterns = [
     path('agents/',gestion_agents_views.GestionAgentsAPIView.as_view()),
     path('agents/<int:id_agent>/',gestion_agents_views.GestionAgentsAPIView.as_view()),
-    path("demandes/", gestion_demande_views.DemandeActeNaissViews.as_view(), name="demandes"),
+    path("demandes/", gestion_demande_views.DemandeActeNaissViews.as_view(), name="demandes-list"),
+
+    path("demandes/<int:id_demande>", gestion_demande_views.DemandeActeNaissViews.as_view(), name="demandes"),
     # #Citoyen
     # path('citoyens/',gestion_citoyens_views.GestionClient.as_view()),
     # path('citoyens/<int:id_citoyen>/',gestion_citoyens_views.GestionClient.as_view()),

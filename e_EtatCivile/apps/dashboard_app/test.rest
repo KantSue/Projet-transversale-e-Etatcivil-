@@ -1,5 +1,5 @@
 
-GET http://127.0.0.1:8000/dashboard/demandes/
+GET http://127.0.0.1:8000/dashboard/demandes/6
 Content-Type: application/json
 
 ###
@@ -25,33 +25,39 @@ Content-Type: application/json
 
 
 ###
-POST   http://127.0.0.1:8000/dashboard/demandes/
+POST http://127.0.0.1:8000/dashboard/demandes/
 Content-Type: application/json
 
 {
-  "type_acte": 1,
-  "num_acte": "NAISS-001",
-  "id_citoyen": 10,
-  "id_commune": 2,
+  "id_type_acte": 1,
+  "num_acte": "NAISS-003",
+  "id_citoyen": 3,
+  "id_commune": 1,
 
-  "pere-nom_personne": "Rakoto",
-  "pere-prenom_personne": "Jean",
-  "pere-date_naissance": "1980-05-10",
-  "pere-lieu_naiss": "Tana",
-  "pere-sexe": "M",
-  "pere-profession": "Ingénieur",
+  "pere": {
+    "nom_personne": "Rasoa",
+    "prenom_personne": "Michel",
+    "date_naissance": "1975-07-18",
+    "lieu_naiss": "Antsirabe",
+    "sexe": "M",
+    "profession": "Agriculteur"
+  },
 
-  "mere-nom_personne": "Rabe",
-  "mere-prenom_personne": "Marie",
-  "mere-date_naissance": "1985-01-01",
-  "mere-lieu_naiss": "Tamatave",
-  "mere-sexe": "F",
-  "mere-profession": "Médecin",
+  "mere": {
+    "nom_personne": "Rakotondrazafy",
+    "prenom_personne": "Elise",
+    "date_naissance": "1988-11-05",
+    "lieu_naiss": "Morondava",
+    "sexe": "F",
+    "profession": "Comptable"
+  },
 
-  "enfant-nom_personne": "Rakoto",
-  "enfant-prenom_personne": "Junior",
-  "enfant-date_naissance": "2026-01-01",
-  "enfant-lieu_naiss": "Tana",
-  "enfant-sexe": "M",
-  "enfant-profession": "etudiant"
+  "enfant": {
+    "nom_personne": "Rasoa",
+    "prenom_personne": "Kevin",
+    "date_naissance": "2026-02-20",
+    "lieu_naiss": "Toamasina",
+    "sexe": "M",
+    "profession": "Néant"
+  }
 }

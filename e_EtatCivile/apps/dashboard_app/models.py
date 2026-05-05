@@ -235,6 +235,7 @@ class Demande(models.Model):
         blank=True,
         db_column='id_commune'       # garde le nom SQL exact si tu veux rester fidèle à ta table
     )
+    num_demande=models.CharField(max_length=100)
 
     class Meta:
         managed = False
@@ -257,13 +258,13 @@ class Personne(models.Model):
 class DemandePersonne(models.Model):
     id_demande_personne = models.AutoField(primary_key=True)
     role = models.CharField(max_length=8)
-    id_personne = models.ForeignKey(Personne,models.DO_NOTHING,db_column='id_personne',related_name='personne')
-    id_demande = models.ForeignKey(Demande,models.DO_NOTHING,db_column='id_demande',related_name='demande_personne')
+    personne = models.ForeignKey(Personne,models.DO_NOTHING,db_column='id_personne',related_name='personne')
+    demande = models.ForeignKey(Demande,models.DO_NOTHING,db_column='id_demande',related_name='demandepersonne')
 
     class Meta:
         managed = False
         db_table = 'demande_personne'
-        unique_together = (('id_demande', 'role'),)
+        unique_together = (('demande', 'role'),)
 
 
 class DjangoAdminLog(models.Model):
