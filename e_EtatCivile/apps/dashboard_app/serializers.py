@@ -133,17 +133,11 @@ class TypeActeSerializer(serializers.ModelSerializer):
         fields = ['id_type_acte', 'libelle'] 
 
 class ActeSerializer(serializers.ModelSerializer):
-    type_acte = TypeActeSerializer(read_only=True)
-    id_type_acte = serializers.PrimaryKeyRelatedField(
-        queryset=TypeActe.objects.all(),
-        source='type_acte',
-        write_only=True
-    )
 
     class Meta:
         model = Acte
         fields = '__all__'
-
+        read_only_fields=['id_acte']
 
 class ActeNaissanceSerializer(serializers.ModelSerializer):
     id_acte = ActeSerializer(read_only=True)

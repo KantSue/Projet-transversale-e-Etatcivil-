@@ -1,5 +1,10 @@
 
-GET http://127.0.0.1:8000/dashboard/demandes/6
+GET http://127.0.0.1:8000/dashboard/demandes/
+Content-Type: application/json
+
+###
+
+GET http://127.0.0.1:8000/dashboard/recherche/?q=Rakoto Hery
 Content-Type: application/json
 
 ###

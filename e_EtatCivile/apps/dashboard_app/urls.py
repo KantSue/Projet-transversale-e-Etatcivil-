@@ -1,5 +1,5 @@
 from apps.dashboard_app.views.views_admin import gestion_agents_views,gestion_demande_views,gestion_citoyens_views
-from apps.dashboard_app.views.views_agent import file_attente_views
+from apps.dashboard_app.views.views_agent import file_attente_views,Recherche_acte_view
 from apps.dashboard_app.views.views_citoyen import servicesCitoyens_views
 
 from apps.dashboard_app.views import CommonViews
@@ -15,10 +15,14 @@ urlpatterns = [
     path("demandes/", gestion_demande_views.DemandeActeNaissViews.as_view(), name="demandes-list"),
     path("demandes/<int:id_agent>/<int:id_demande>/", gestion_demande_views.DemandeActeNaissViews.as_view(), name="demandes-confirmation"),
 
-    path("demandes/<int:id_demande>/", gestion_demande_views.DemandeActeNaissViews.as_view(), name="demandes"),
+   path("demandes/<int:id_demande>/", gestion_demande_views.DemandeActeNaissViews.as_view(), name="demandes"),
     # #Citoyen
     # path('citoyens/',gestion_citoyens_views.GestionClient.as_view()),
     # path('citoyens/<int:id_citoyen>/',gestion_citoyens_views.GestionClient.as_view()),
+    
+    path("recherche/", Recherche_acte_view.SearchActeView.as_view(), name="demandes"),
+    path("recherche/suggestions/", Recherche_acte_view.SuggestionsView.as_view(), name="suggestions"),
+
     path('',include(routeur.urls)),
     
     

@@ -9,7 +9,7 @@ class Acte(models.Model):
     num_acte = models.CharField(unique=True, max_length=50)
     date_acte = models.DateField()
     temoin = models.ForeignKey('Personne', models.DO_NOTHING, db_column='temoin', blank=True, null=True)
-    id_type_acte = models.ForeignKey('TypeActe', models.DO_NOTHING, db_column='id_type_acte')
+    type_acte = models.ForeignKey('TypeActe', models.DO_NOTHING, db_column='id_type_acte')
 
     class Meta:
         managed = False
