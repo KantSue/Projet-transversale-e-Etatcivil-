@@ -11,15 +11,15 @@ class AjoutDemandeForm(forms.ModelForm):
 class ActeNaissanceForm(forms.ModelForm):
     class Meta:
         model=ActeNaissance
-        fields=['enfant','pere','mere']
+        fields=['id_acte']
 class ActeMariageForm(forms.ModelForm):
     class Meta:
         model=ActeMariage
-        fields=['epoux1','epoux2','date_mariage','lieu_mariage']
+        fields=['date_mariage','lieu_mariage']
 class ActeDecesForm(forms.ModelForm):
     class Meta:
         model=ActeDeces
-        fields = ['defunt', 'date_deces', 'lieu_deces', 'cause_deces']
+        fields = ['date_deces', 'lieu_deces', 'cause_deces']
 class AjoutAgentForm(forms.ModelForm):
     class Meta:
         model=Utilisateur

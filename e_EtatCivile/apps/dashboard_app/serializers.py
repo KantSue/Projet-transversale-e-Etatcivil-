@@ -1,7 +1,8 @@
 # serializers.py
 from rest_framework import serializers
 
-from datetime import datetime
+from datetime import date, datetime
+from django.utils import timezone
 from rest_framework import serializers
 from apps.dashboard_app.services.demande_service import generer_num_demande
 from .models import (
@@ -141,22 +142,11 @@ class ActeSerializer(serializers.ModelSerializer):
 
 class ActeNaissanceSerializer(serializers.ModelSerializer):
     id_acte = ActeSerializer(read_only=True)
-    enfant = PersonneSerializer(read_only=True)
-    pere = PersonneSerializer(read_only=True)
-    mere = PersonneSerializer(read_only=True)
-
+   
     id_acte_id = serializers.PrimaryKeyRelatedField(
         queryset=Acte.objects.all(), source='id_acte', write_only=True
     )
-    enfant_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='enfant', write_only=True
-    )
-    pere_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='pere', write_only=True, allow_null=True, required=False
-    )
-    mere_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='mere', write_only=True, allow_null=True, required=False
-    )
+    
 
     class Meta:
         model = ActeNaissance
@@ -165,19 +155,12 @@ class ActeNaissanceSerializer(serializers.ModelSerializer):
 
 class ActeMariageSerializer(serializers.ModelSerializer):
     id_acte = ActeSerializer(read_only=True)
-    epoux1 = PersonneSerializer(read_only=True)
-    epoux2 = PersonneSerializer(read_only=True)
+   
 
     id_acte_id = serializers.PrimaryKeyRelatedField(
         queryset=Acte.objects.all(), source='id_acte', write_only=True
     )
-    epoux1_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='epoux1', write_only=True
-    )
-    epoux2_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='epoux2', write_only=True
-    )
-
+   
     class Meta:
         model = ActeMariage
         fields = '__all__'
@@ -185,7 +168,6 @@ class ActeMariageSerializer(serializers.ModelSerializer):
 
 class ActeDecesSerializer(serializers.ModelSerializer):
     id_acte = ActeSerializer(read_only=True)
-    defunt = PersonneSerializer(read_only=True)
 
     id_acte_id = serializers.PrimaryKeyRelatedField(
         queryset=Acte.objects.all(), source='id_acte', write_only=True
@@ -236,40 +218,110 @@ class DemandeSerializer(serializers.ModelSerializer):
         fields='__all__'
         
 class DemandeCreateSerializer(serializers.ModelSerializer):
-    pere = PersonneSerializer()
-    mere = PersonneSerializer()
-    enfant = PersonneSerializer()
-   
-    class Meta:
-        model = Demande
-        fields = '__all__'
-        read_only_fields=['id_agent','id_acte', 'num_demande']
-    def create(self, validated_data):
-        enfant_dn = validated_data['enfant']['date_naissance']
-        
-        if validated_data['pere']['date_naissance'] >= enfant_dn:
-            raise serializers.ValidationError("La date de naissance du père doit être antérieure à celle de l'enfant.")
-        
-        if validated_data['mere']['date_naissance'] >= enfant_dn:
-            raise serializers.ValidationError("La date de naissance de la mère doit être antérieure à celle de l'enfant.")
+    # Personnes optionnelles selon le type
+    # Naissance
+    pere   = PersonneSerializer(required=False, allow_null=True)
+    mere   = PersonneSerializer(required=False, allow_null=True)
+    enfant = PersonneSerializer(required=False, allow_null=True)
+    # Mariage
+    epoux1      = PersonneSerializer(required=False, allow_null=True)
+    epoux2      = PersonneSerializer(required=False, allow_null=True)
+    pere_epoux1 = PersonneSerializer(required=False, allow_null=True)
+    mere_epoux1 = PersonneSerializer(required=False, allow_null=True)
+    pere_epoux2 = PersonneSerializer(required=False, allow_null=True)
+    mere_epoux2 = PersonneSerializer(required=False, allow_null=True)
+    # Deces
+    defunt      = PersonneSerializer(required=False, allow_null=True)
+    pere_defunt = PersonneSerializer(required=False, allow_null=True)
+    mere_defunt = PersonneSerializer(required=False, allow_null=True)
 
-        pere_data=validated_data.pop('pere')
-        mere_data=validated_data.pop('mere')
-        enfant_data=validated_data.pop('enfant')
-        validated_data['num_demande']=generer_num_demande()
+    id_arrondissement = serializers.PrimaryKeyRelatedField(
+        queryset=Arondissement.objects.all(),
+        required=False, allow_null=True
+    )
+
+    class Meta:
+        model  = Demande
+        fields = '__all__'
+        read_only_fields = ['id_agent', 'id_acte', 'num_demande']
+
+    def validate(self, data):
+        type_acte  = data.get('id_type_acte')
+        id_commune = data.get('id_commune')
+        id_aro     = data.get('id_arrondissement')
+
+        # Arrondissement obligatoire pour Antananarivo
+        if id_commune and id_commune.id_commune == 1 and not id_aro:
+            raise serializers.ValidationError(
+                "L'arrondissement est obligatoire pour Antananarivo."
+            )
+
+        if not type_acte:
+            return data
+
+        libelle = type_acte.libelle.lower()
+
+        # Validation naissance
+        if libelle == 'acte naissance':
+            if not data.get('enfant'):
+                raise serializers.ValidationError("L'enfant est obligatoire.")
+            enfant_dn = data['enfant'].get('date_naissance')
+            if data.get('pere') and data['pere'].get('date_naissance') >= enfant_dn:
+                raise serializers.ValidationError(
+                    "La date de naissance du père doit être antérieure à celle de l'enfant."
+                )
+            if data.get('mere') and data['mere'].get('date_naissance') >= enfant_dn:
+                raise serializers.ValidationError(
+                    "La date de naissance de la mère doit être antérieure à celle de l'enfant."
+                )
+
+        # Validation mariage
+        elif libelle == 'acte mariage':
+            if not data.get('epoux1') or not data.get('epoux2'):
+                raise serializers.ValidationError(
+                    "Les deux époux sont obligatoires."
+                )
+
+        # Validation décès
+        elif 'deces' in libelle or 'décès' in libelle:
+            if not data.get('defunt'):
+                raise serializers.ValidationError("Le défunt est obligatoire.")
+
+        return data
+
+    def create(self, validated_data):
+        # Extraire toutes les personnes
+        personnes_roles = {
+            'pere'       : validated_data.pop('pere',        None),
+            'mere'       : validated_data.pop('mere',        None),
+            'enfant'     : validated_data.pop('enfant',      None),
+            'epoux1'     : validated_data.pop('epoux1',      None),
+            'epoux2'     : validated_data.pop('epoux2',      None),
+            'pere_epoux1': validated_data.pop('pere_epoux1', None),
+            'mere_epoux1': validated_data.pop('mere_epoux1', None),
+            'pere_epoux2': validated_data.pop('pere_epoux2', None),
+            'mere_epoux2': validated_data.pop('mere_epoux2', None),
+            'defunt'     : validated_data.pop('defunt',      None),
+            'pere_defunt': validated_data.pop('pere_defunt', None),
+            'mere_defunt': validated_data.pop('mere_defunt', None),
+        }
+
+        validated_data['num_demande'] = generer_num_demande()
         validated_data.setdefault('statut_demande', 'en attente')
 
-        pere=Personne.objects.create(**pere_data)
-        mere=Personne.objects.create(**mere_data)
-        enfant=Personne.objects.create(**enfant_data)
-        
-        demande=Demande.objects.create(**validated_data)
-        
-        DemandePersonne.objects.create(demande=demande, personne=pere, role='pere')
-        DemandePersonne.objects.create(demande=demande, personne=mere, role='mere')
-        DemandePersonne.objects.create(demande=demande, personne=enfant, role='enfant')
-        return demande
+        demande = Demande.objects.create(**validated_data)
 
+        # Créer personne + demande_personne pour chaque rôle
+        for role, data in personnes_roles.items():
+            if data:
+                personne = Personne.objects.create(**data)
+                DemandePersonne.objects.create(
+                    demande  = demande,
+                    personne = personne,
+                    role     = role
+                )
+
+        return demande
 
 class DemandeReadSerializer(serializers.ModelSerializer):
     personnes = DemandePersonneSerializer(
@@ -378,10 +430,12 @@ class JournalSerializer(serializers.ModelSerializer):
 
         elif action == 'VALIDER':
             demande.statut_demande = 'VALIDER'
+            demande.date_maj = date.today()
 
         elif action == 'REFUSER':
             demande.statut_demande = 'REFUSER'
             demande.motif_refus    = motif
+            demande.date_maj = date.today()
 
         else:
             raise serializers.ValidationError(f"Action '{action}' non reconnue.")
@@ -389,6 +443,7 @@ class JournalSerializer(serializers.ModelSerializer):
         demande.save()
 
         # Création du journal
+        validated_data.setdefault('horodatage', timezone.now())
         journal = JournalAudit.objects.create(**validated_data)
         return journal
 

@@ -1,10 +1,10 @@
 
-GET http://127.0.0.1:8000/dashboard/demandes/
+GET http://127.0.0.1:8000/dashboard/demandes/10/
 Content-Type: application/json
 
 ###
 
-GET http://127.0.0.1:8000/dashboard/recherche/?q=Rakoto Hery
+GET http://127.0.0.1:8000/dashboard/recherche/?q=NAISS-2024-001
 Content-Type: application/json
 
 ###
@@ -74,3 +74,92 @@ Content-Type: application/json
     "profession": "Néant"
   }
 }
+
+###
+GET http://127.0.0.1:8000/dashboard/arrondissements/1/verifier/
+Content-Type: application/json
+
+###
+GET http://127.0.0.1:8000/dashboard/demandes/10/acte/pdf/
+Content-Type: application/json
+
+###
+# Demande non validée
+GET http://127.0.0.1:8000/dashboard/demandes/23/acte/pdf/
+Content-Type: application/json
+###
+# Demande inexistante
+GET http://127.0.0.1:8000/dashboard/demandes/999/acte/pdf/
+Content-Type: application/json
+
+###
+POST http://127.0.0.1:8000/dashboard/paiements/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMSwiZW1haWwiOiJqdWxpZTJAZ21haWwuY29tIiwicm9sZSI6ImNpdG95ZW4iLCJub20iOiJKdWxpZSBNYXlhIiwiaWRfYXJvbmRpc3NlbWVudCI6MSwiaWRfY29tbXVuZSI6MSwiZXhwIjoxNzc4NTU2MzI2fQ.naBG-inTjXLJNSo7M_cnLS42L7xdQYTY5_xtwiIrsws
+Content-Type: application/json
+
+{
+    "numero_tel"       : "0341234567",
+    "id_type_acte"     : 1,
+    "num_acte"         : "NAISS-2024-001",
+    "id_commune"       : 1,
+    "id_arrondissement": 4,
+    "enfant": {
+        "nom_personne"    : "Rakoto",
+        "prenom_personne" : "Elsa",
+        "date_naissance"  : "2024-05-01 08:35:00",
+        "lieu_naiss"      : "Antananarivo",
+        "sexe"            : "F",
+        "profession"      : "Neant"
+    },
+    "pere": {
+        "nom_personne"    : "Rakoto",
+        "prenom_personne" : "Jean",
+        "date_naissance"  : "1978-03-12 00:00:00",
+        "lieu_naiss"      : "Antananarivo",
+        "sexe"            : "M",
+        "profession"      : "Ingenieur"
+    },
+    "mere": {
+        "nom_personne"    : "Rakoto",
+        "prenom_personne" : "Noro",
+        "date_naissance"  : "1982-07-25 00:00:00",
+        "lieu_naiss"      : "Antananarivo",
+        "sexe"            : "F",
+        "profession"      : "Infirmiere"
+    }
+}
+
+###
+# F7 - Connexion administrateur
+# 1) Lance cette requete.
+# 2) Copie la valeur "token" retournee.
+# 3) Colle-la dans la variable adminToken ci-dessous.
+POST http://127.0.0.1:8000/accounts/login/
+Content-Type: application/json
+
+{
+    "email": "Lucie@gmail.com",
+    "mdp_user": "123"
+}
+
+###
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6Ikx1Y2llQGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbmlzdHJhdGV1ciIsIm5vbSI6Ikx1Y2llIFJha290byIsImlkX2Fyb25kaXNzZW1lbnQiOjEsImlkX2NvbW11bmUiOjEsImV4cCI6MTc3ODU1ODM5MH0.t9aE_JakAjGsrWxDslxW3BGroZJt6S-9jeqEDT6mlic
+
+###
+# F7 - Tableau de bord statistiques en JSON
+GET http://127.0.0.1:8000/dashboard/statistiques/api/?date_debut=2026-01-01&date_fin=2026-12-31
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# F7 - Export CSV anonymise des statistiques
+GET http://127.0.0.1:8000/dashboard/statistiques/export/?date_debut=2026-01-01&date_fin=2026-12-31
+Authorization: Bearer {{adminToken}}
+Accept: text/csv
+
+###
+# F7 - Page HTML du tableau de bord
+# A ouvrir dans le navigateur avec un cookie token admin, ou a tester ici si ton client REST envoie le token.
+GET http://127.0.0.1:8000/dashboard/statistiques/?date_debut=2026-01-01&date_fin=2026-12-31
+Authorization: Bearer {{adminToken}}
+Accept: text/html

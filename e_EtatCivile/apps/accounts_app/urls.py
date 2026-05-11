@@ -1,13 +1,19 @@
-from . import services
-
-from . import views
 from django.urls import path
+from . import views
 
 urlpatterns = [
-    # path('register/',views.Agent_register,name='register'),
-    # path('register1/',views.Admin_register,name='register1'),
-    path('register2/',views.Citoyen_register,name='register2'),
-    path('details/',views.detals,name='details'),
-    path('login/',views.login,name='login'),
-    path('logout/',views.logout,name='logout'),
+    # Inscription citoyen
+    path('register/',  views.CitoyenRegisterView.as_view(), name='register'),
+
+    # Connexion — tous rôles (citoyen, agent, administrateur)
+    path('login/',     views.LoginView.as_view(),           name='login'),
+
+    # Déconnexion
+    path('logout/',    views.LogoutView.as_view(),          name='logout'),
+
+    # Profil utilisateur connecté
+    path('profil/',    views.ProfilView.as_view(),          name='profil'),
+
+    # Communes + arrondissements (pour formulaire inscription)
+    path('communes/',  views.CommunesView.as_view(),        name='communes'),
 ]

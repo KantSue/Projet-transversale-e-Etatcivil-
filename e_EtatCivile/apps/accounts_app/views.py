@@ -1,140 +1,248 @@
-from datetime import datetime
-from multiprocessing import context
-from django.contrib.auth.hashers import make_password
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render,redirect
-from django.views.decorators.csrf import csrf_exempt
-
-from .models import Utilisateur,Citoyen,Commune,Arondissement,Administrateur,Agent
-from .services import *
-from .forms import UserLoginForm,AgentLoginForm
 import bcrypt
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.utils import timezone
 
-# def Agent_register (request):
-#     if request.method=='POST':
-#         nom_user=request.POST.get('nom_user')
-#         prenom_user=request.POST.get('prenom_user')
-#         email=request.POST.get('email')
-#         mdp_user=request.POST.get('mdp_user')
-#         mdp_hash=bcrypt.hashpw(mdp_user.encode('utf-8'),bcrypt.gensalt())
-#         role='administrateur'
-#         matricule=request.POST.get('matricule')
-#         id_arondissement=request.POST.get('id_arondissement')
-#         print(mdp_user)
-        
-        
-#         user=Utilisateur.objects.create(nom_user=nom_user,
-#                                    prenom_user=prenom_user,
-#                                    email=email,
-#                                    mdp_user=mdp_hash.decode('utf-8'),
-#                                    id_arondissement=id_arondissement,
-#                                    matricule=matricule,
-#                                    role=role)
-#         Administrateur.objects.create(id_user=user,matricule=matricule)
-#         token=generate_jwt(user)
-#         response=redirect('dashboard')
-#         response.set_cookie('token',token)
-#         return response
-#     context={}
-#     context['commune']=Commune.objects.select_related('id_arondissement').all()
-#     return render(request,template_name='auth.html',context={'context':context})
-
-# #Admin
-# def Admin_register (request):
-#     if request.method=='POST':
-#         nom_user=request.POST.get('nom_user')
-#         prenom_user=request.POST.get('prenom_user')
-#         email=request.POST.get('email')
-#         mdp_user=request.POST.get('mdp_user')
-#         mdp_hash=bcrypt.hashpw(mdp_user.encode('utf-8'),bcrypt.gensalt())
-#         role='administrateur'
-#         print(mdp_user)
-        
-        
-#         Utilisateur.objects.create(nom_user=nom_user,
-#                                    prenom_user=prenom_user,
-#                                    email=email,
-#                                    mdp_user=mdp_hash.decode('utf-8'),
-#                                    role=role)
-#     context={}
-#     context['commune']=Commune.objects.select_related('id_arondissement').all()
-#     return render(request,template_name='auth.html',context={'context':context})
-
-# #citoyen
-def Citoyen_register (request):
-    if request.method=='POST':
-        
-        nom_user=request.POST.get('nom_user')
-        print(nom_user)
-        prenom_user=request.POST.get('prenom_user')
-        email=request.POST.get('email')
-        mdp_user=request.POST.get('mdp_user')
-        mdp_hash=bcrypt.hashpw(mdp_user.encode('utf-8'),bcrypt.gensalt())
-        role='citoyen'
-        print(mdp_user)
-        
-        
-        user=Utilisateur.objects.create(nom_user=nom_user,
-                                   prenom_user=prenom_user,
-                                   email=email,
-                                   mdp_user=mdp_hash.decode('utf-8'),
-                                   role=role)
-        Citoyen.objects.create(id_user=user)
-        token=generate_jwt(user)
-        response=redirect('dashboard')
-        response.set_cookie('token',token)
-        return response
-    arrondissements = Arondissement.objects.select_related('id_commune').order_by('id_commune__nom_commune')
-    return render(request, template_name='C_signUp.html',context={'arrondissements': arrondissements})
+from .models import Utilisateur, Commune, Arondissement
+from .serializers import CitoyenRegisterSerializer, LoginSerializer, UtilisateurSerializer,AgentCreateSerializer
+from .services import generate_jwt, verify_jwt
 
 
-# def Authentification(request):
-#     form=UserLoginForm(request.POST or None)
-#     form2=AgentLoginForm(request.POST or None)
-#     if form.is_valid() and form2.is_valid():
-#         # 🔹 1. créer utilisateur
-#         user = form.save(commit=False)
-#         user.role = 'agent'
-#         user.mdp_user = make_password(user.mdp_user)
-#         user.save()
+# ─────────────────────────────────────────────
+# Inscription Citoyen et agents
+# ─────────────────────────────────────────────
+class AgentCreateView(APIView):
+    """
+    POST /auth/agents/
+    Réservé aux administrateurs uniquement.
+    Crée un agent et envoie son mot de passe par email.
+    """
+    def post(self, request):
+        # Vérifier que c'est un admin
+        token = _get_token(request)
+        if not token:
+            return Response({"error": "Non authentifié."}, status=401)
 
-#             # 🔹 2. créer agent lié à user
-#         agent = form2.save(commit=False)
-#         agent.id_user = user   # 💥 ICI LA SOLUTION
-#         agent.save()
-#         return redirect('details')
-#     return render(request,template_name='formulaire.html',context={'form':form,'form2':form2})
-def detals(request):
-    context={}
-    context['utilisateurs']=Utilisateur.objects.all()
-    return render (request,template_name='info.html',context={'context':context})
-    # return HttpResponse(request,template_name='info.html',context={'context':context})
-  
-def login(request):
-    if request.method=='POST':
-        # user_name=request.POST.get('nom_user')
-        mdp_user=request.POST.get('mdp_user')
-        email=request.POST.get('email')
-        # matricule=request.POST.get('matricule')
+        payload = verify_jwt(token)
+        if not payload:
+            return Response({"error": "Token invalide ou expiré."}, status=401)
+
+        if payload['role'] != 'administrateur':
+            return Response({"error": "Accès réservé aux administrateurs."}, status=403)
+
+        serializer = AgentCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response({
+                "message": f"Agent créé. Mot de passe envoyé à {user.email}.",
+                "agent"  : {
+                    "id"   : user.id_user,
+                    "nom"  : f"{user.nom_user} {user.prenom_user}",
+                    "email": user.email,
+                }
+            }, status=201)
+
+        return Response(serializer.errors, status=400)
+
+class CitoyenRegisterView(APIView):
+    """
+    POST /auth/register/
+    Inscription d'un nouveau citoyen.
+    Body JSON :
+    {
+        "nom_user"        : "Rakoto",
+        "prenom_user"     : "Jean",
+        "email"           : "jean@mail.mg",
+        "mdp_user"        : "motdepasse",
+        "id_commune"      : 1,
+        "id_arondissement": 4      ← obligatoire si id_commune == 1
+    }
+    """
+    def post(self, request):
+        serializer = CitoyenRegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user  = serializer.save()
+            token = generate_jwt(user)
+            return Response({
+                "message" : "Inscription réussie.",
+                "token"   : token,
+                "role"    : user.role,
+                "user"    : {
+                    "id"    : user.id_user,
+                    "nom"   : f"{user.nom_user} {user.prenom_user}",
+                    "email" : user.email,
+                }
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ─────────────────────────────────────────────
+# Connexion
+# ─────────────────────────────────────────────
+
+class LoginView(APIView):
+    """
+    POST /auth/login/
+    Connexion pour tous les rôles (citoyen, agent, administrateur).
+    Body JSON :
+    {
+        "email"   : "jean@mail.mg",
+        "mdp_user": "motdepasse"
+    }
+    Retourne un token JWT à stocker côté client.
+    """
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user  = serializer.validated_data['user']
+            token = generate_jwt(user)
+            return Response({
+                "message" : "Connexion réussie.",
+                "token"   : token,
+                "role"    : user.role,
+                "user"    : {
+                    "id"    : user.id_user,
+                    "nom"   : f"{user.nom_user} {user.prenom_user}",
+                    "email" : user.email,
+                }
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ─────────────────────────────────────────────
+# Profil utilisateur connecté
+# ─────────────────────────────────────────────
+
+class ProfilView(APIView):
+    """
+    GET  /auth/profil/ → voir son profil
+    PATCH /auth/profil/ → modifier ses infos
+    """
+    def get(self, request):
+        token = _get_token(request)
+        if not token:
+            return Response({"error": "Non authentifié."}, status=401)
+
+        payload = verify_jwt(token)
+        if not payload:
+            return Response({"error": "Token invalide ou expiré."}, status=401)
+
         try:
-            user=Utilisateur.objects.get(email=email)
-            
-            if bcrypt.checkpw(mdp_user.encode('utf-8'),user.mdp_user.encode('utf-8')):
-                token=generate_jwt(user)
-                
-                response=redirect('dashboard')
-                response.set_cookie('token',token)
-                
-                
-                return response
-                
-            else:
-                return JsonResponse({ 'error':'Mots de passe incorrect'})
+            user = Utilisateur.objects.select_related(
+                'id_arondissement__id_commune', 'id_commune'
+            ).get(id_user=payload['user_id'])
         except Utilisateur.DoesNotExist:
-            return JsonResponse({ 'error': 'Utilisateur introuvable' })
-    return render(request=request, template_name='login.html')
+            return Response({"error": "Utilisateur introuvable."}, status=404)
 
-def logout(request):
-    response=redirect('home')
-    response.delete_cookie('token')
-    return response
+        serializer = UtilisateurSerializer(user)
+        return Response(serializer.data, status=200)
+
+    def patch(self, request):
+        token = _get_token(request)
+        if not token:
+            return Response({"error": "Non authentifié."}, status=401)
+
+        payload = verify_jwt(token)
+        if not payload:
+            return Response({"error": "Token invalide ou expiré."}, status=401)
+
+        try:
+            user = Utilisateur.objects.get(id_user=payload['user_id'])
+        except Utilisateur.DoesNotExist:
+            return Response({"error": "Utilisateur introuvable."}, status=404)
+
+        # Champs autorisés selon le rôle
+        CHAMPS_PAR_ROLE = {
+            'citoyen'       : ['nom_user', 'prenom_user', 'mdp_user'],
+            'agent'         : ['nom_user', 'prenom_user', 'mdp_user'],
+            'administrateur': ['nom_user', 'prenom_user', 'mdp_user', 'email'],
+        }
+        champs_autorises = CHAMPS_PAR_ROLE.get(payload['role'], [])
+
+        for champ in champs_autorises:
+            if champ in request.data:
+                if champ == 'mdp_user':
+                    nouveau_mdp   = request.data['mdp_user']
+                    mdp_hash      = bcrypt.hashpw(nouveau_mdp.encode('utf-8'), bcrypt.gensalt())
+                    user.mdp_user = mdp_hash.decode('utf-8')
+                elif champ == 'email':
+                    # Vérifier unicité pour admin
+                    nouvel_email = request.data['email']
+                    if Utilisateur.objects.filter(email=nouvel_email).exclude(id_user=user.id_user).exists():
+                        return Response({"error": "Email déjà utilisé."}, status=400)
+                    user.email = nouvel_email
+                else:
+                    setattr(user, champ, request.data[champ])
+
+        user.save()
+        nouveau_token = generate_jwt(user)
+
+        return Response({
+            "message" : "Profil mis à jour.",
+            "token"   : nouveau_token,
+            "user"    : {
+                "id"   : user.id_user,
+                "nom"  : f"{user.nom_user} {user.prenom_user}",
+                "email": user.email,
+            }
+        }, status=200)
+# ─────────────────────────────────────────────
+# Liste des communes et arrondissements
+# (utile pour le formulaire d'inscription)
+# ─────────────────────────────────────────────
+
+class CommunesView(APIView):
+    """
+    GET /auth/communes/
+    Retourne toutes les communes avec leurs arrondissements.
+    """
+    def get(self, request):
+        communes = Commune.objects.all()
+        data = []
+        for c in communes:
+            aros = Arondissement.objects.filter(id_commune=c)
+            data.append({
+                "id_commune"      : c.id_commune,
+                "nom_commune"     : c.nom_commune,
+                "arrondissements" : [
+                    {
+                        "id_arondissement" : a.id_arondissement,
+                        "num_arondissement": a.num_arondissement,
+                        "nom_arondissement": a.nom_arondissement,
+                    }
+                    for a in aros
+                ]
+            })
+        return Response(data, status=status.HTTP_200_OK)
+
+
+# ─────────────────────────────────────────────
+# Déconnexion
+# ─────────────────────────────────────────────
+
+class LogoutView(APIView):
+    """
+    POST /auth/logout/
+    Invalide le token côté client (le client doit supprimer le token).
+    """
+    def post(self, request):
+        return Response({"message": "Déconnexion réussie."}, status=status.HTTP_200_OK)
+
+
+# ─────────────────────────────────────────────
+# Utilitaire interne
+# ─────────────────────────────────────────────
+
+def _get_token(request):
+    """
+    Récupère le token depuis :
+    1. Header Authorization: Bearer <token>
+    2. Cookie 'token'
+    """
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.startswith('Bearer '):
+        return auth_header.split(' ')[1]
+    return request.COOKIES.get('token')

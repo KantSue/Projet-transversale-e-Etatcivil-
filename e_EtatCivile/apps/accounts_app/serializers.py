@@ -1,241 +1,184 @@
-# serializers.py
-
 from rest_framework import serializers
-from .models import (
-    Acte, ActeDeces, ActeMariage, ActeNaissance, ActePersonne,
-    Administrateur, Agent, Archive, Arondissement, Citoyen, Commune,
-    Declaration, DeclarationPiece, Demande, Paiement, Personne,
-    PieceJoint, Statistique, Utilisateur
-)
+from django.utils import timezone
+from .models import Utilisateur, Citoyen, Agent, Administrateur, Arondissement, Commune
+from .services import generate_jwt
+import bcrypt
 
 
-class UtilisateurSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Utilisateur
-        fields = '__all__'
-        extra_kwargs = {
-            'mdp_user': {'write_only': True}  # Sécurité : mot de passe jamais retourné
-        }
-
-
-class ArondissementSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Arondissement
-        fields = '__all__'
-
+# ─────────────────────────────────────────────
+# Serializers de lecture
+# ─────────────────────────────────────────────
 
 class CommuneSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Commune
-        fields = '__all__'
+        model  = Commune
+        fields = ['id_commune', 'nom_commune', 'nom_maire']
 
 
-class PersonneSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Personne
-        fields = '__all__'
-
-
-class AgentSerializer(serializers.ModelSerializer):
-    id_user = UtilisateurSerializer(read_only=True)
-    id_user_id = serializers.PrimaryKeyRelatedField(
-        queryset=Utilisateur.objects.all(), source='id_user', write_only=True
-    )
+class ArondissementSerializer(serializers.ModelSerializer):
+    id_commune = CommuneSerializer(read_only=True)
 
     class Meta:
-        model = Agent
-        fields = '__all__'
+        model  = Arondissement
+        fields = ['id_arondissement', 'num_arondissement',
+                  'nom_arondissement', 'statut', 'id_commune']
 
 
-class AdministrateurSerializer(serializers.ModelSerializer):
-    id_user = UtilisateurSerializer(read_only=True)
-    id_user_id = serializers.PrimaryKeyRelatedField(
-        queryset=Utilisateur.objects.all(), source='id_user', write_only=True
-    )
-
-    class Meta:
-        model = Administrateur
-        fields = '__all__'
-
-
-class CitoyenSerializer(serializers.ModelSerializer):
-    id_user = UtilisateurSerializer(read_only=True)
-    id_user_id = serializers.PrimaryKeyRelatedField(
-        queryset=Utilisateur.objects.all(), source='id_user', write_only=True
-    )
+class UtilisateurSerializer(serializers.ModelSerializer):
+    id_arondissement = ArondissementSerializer(read_only=True)
+    id_commune       = CommuneSerializer(read_only=True)
 
     class Meta:
-        model = Citoyen
-        fields = '__all__'
+        model  = Utilisateur
+        fields = ['id_user', 'nom_user', 'prenom_user', 'email',
+                  'role', 'date_inscription', 'id_arondissement', 'id_commune']
 
 
-class ActeSerializer(serializers.ModelSerializer):
-    temoin = PersonneSerializer(read_only=True)
-    temoin_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='temoin', write_only=True, allow_null=True, required=False
-    )
+# ─────────────────────────────────────────────
+# Inscription citoyen,agent
+# ─────────────────────────────────────────────
 
-    class Meta:
-        model = Acte
-        fields = '__all__'
+class CitoyenRegisterSerializer(serializers.Serializer):
+    nom_user         = serializers.CharField(max_length=100)
+    prenom_user      = serializers.CharField(max_length=100)
+    email            = serializers.EmailField()
+    mdp_user         = serializers.CharField(write_only=True, min_length=6)
+    id_commune       = serializers.IntegerField()
+    id_arondissement = serializers.IntegerField(required=False, allow_null=True)
 
+    def validate_email(self, value):
+        if Utilisateur.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Cet email est déjà utilisé.")
+        return value
 
-class ActeNaissanceSerializer(serializers.ModelSerializer):
-    id_acte = ActeSerializer(read_only=True)
-    enfant = PersonneSerializer(read_only=True)
-    pere = PersonneSerializer(read_only=True)
-    mere = PersonneSerializer(read_only=True)
+    def validate(self, data):
+        id_commune = data.get('id_commune')
+        id_aro     = data.get('id_arondissement')
 
-    id_acte_id = serializers.PrimaryKeyRelatedField(
-        queryset=Acte.objects.all(), source='id_acte', write_only=True
-    )
-    enfant_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='enfant', write_only=True
-    )
-    pere_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='pere', write_only=True, allow_null=True, required=False
-    )
-    mere_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='mere', write_only=True, allow_null=True, required=False
-    )
+        # Antananarivo (commune 1) → arrondissement obligatoire
+        if id_commune == 1 and not id_aro:
+            raise serializers.ValidationError(
+                "L'arrondissement est obligatoire pour la commune d'Antananarivo."
+            )
+        return data
 
-    class Meta:
-        model = ActeNaissance
-        fields = '__all__'
+    def create(self, validated_data):
+        id_aro     = validated_data.pop('id_arondissement', None)
+        id_commune = validated_data.pop('id_commune')
+        mdp_user   = validated_data.pop('mdp_user')
 
+        aro     = Arondissement.objects.get(id_arondissement=id_aro) if id_aro else None
+        commune = Commune.objects.get(id_commune=id_commune)
 
-class ActeMariageSerializer(serializers.ModelSerializer):
-    id_acte = ActeSerializer(read_only=True)
-    epoux1 = PersonneSerializer(read_only=True)
-    epoux2 = PersonneSerializer(read_only=True)
+        mdp_hash = bcrypt.hashpw(mdp_user.encode('utf-8'), bcrypt.gensalt())
 
-    id_acte_id = serializers.PrimaryKeyRelatedField(
-        queryset=Acte.objects.all(), source='id_acte', write_only=True
-    )
-    epoux1_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='epoux1', write_only=True
-    )
-    epoux2_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='epoux2', write_only=True
-    )
+        user = Utilisateur.objects.create(
+            nom_user         = validated_data['nom_user'],
+            prenom_user      = validated_data['prenom_user'],
+            email            = validated_data['email'],
+            mdp_user         = mdp_hash.decode('utf-8'),
+            role             = 'citoyen',
+            id_arondissement = aro,
+            id_commune       = commune,
+            date_inscription = timezone.now().date()
+        )
+        Citoyen.objects.create(id_user=user)
+        return user
 
-    class Meta:
-        model = ActeMariage
-        fields = '__all__'
+import random
+import string
+from django.core.mail import send_mail
+from django.conf import settings
 
+class AgentCreateSerializer(serializers.Serializer):
+    nom_user         = serializers.CharField(max_length=100)
+    prenom_user      = serializers.CharField(max_length=100)
+    email            = serializers.EmailField()
+    matricule        = serializers.IntegerField()
+    id_commune       = serializers.IntegerField()
+    id_arondissement = serializers.IntegerField(required=False, allow_null=True)
 
-class ActeDecesSerializer(serializers.ModelSerializer):
-    id_acte = ActeSerializer(read_only=True)
-    defunt = PersonneSerializer(read_only=True)
+    def validate_email(self, value):
+        if Utilisateur.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email déjà utilisé.")
+        return value
 
-    id_acte_id = serializers.PrimaryKeyRelatedField(
-        queryset=Acte.objects.all(), source='id_acte', write_only=True
-    )
-    defunt_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='defunt', write_only=True
-    )
+    def validate_matricule(self, value):
+        if Agent.objects.filter(matricule=value).exists():
+            raise serializers.ValidationError("Matricule déjà utilisé.")
+        return value
 
-    class Meta:
-        model = ActeDeces
-        fields = '__all__'
+    def validate(self, data):
+        if data.get('id_commune') == 1 and not data.get('id_arondissement'):
+            raise serializers.ValidationError(
+                "L'arrondissement est obligatoire pour Antananarivo."
+            )
+        return data
 
+    def create(self, validated_data):
+        id_aro     = validated_data.pop('id_arondissement', None)
+        id_commune = validated_data.pop('id_commune')
+        matricule  = validated_data.pop('matricule')
 
-class ActePersonneSerializer(serializers.ModelSerializer):
-    id_acte = ActeSerializer(read_only=True)
-    id_personne = PersonneSerializer(read_only=True)
+        aro     = Arondissement.objects.get(id_arondissement=id_aro) if id_aro else None
+        commune = Commune.objects.get(id_commune=id_commune)
 
-    id_acte_id = serializers.PrimaryKeyRelatedField(
-        queryset=Acte.objects.all(), source='id_acte', write_only=True
-    )
-    id_personne_id = serializers.PrimaryKeyRelatedField(
-        queryset=Personne.objects.all(), source='id_personne', write_only=True
-    )
+        # Générer mot de passe aléatoire
+        mdp_clair = ''.join(random.choices(
+            string.ascii_letters + string.digits, k=10
+        ))
+        mdp_hash = bcrypt.hashpw(mdp_clair.encode('utf-8'), bcrypt.gensalt())
 
-    class Meta:
-        model = ActePersonne
-        fields = '__all__'
+        user = Utilisateur.objects.create(
+            nom_user         = validated_data['nom_user'],
+            prenom_user      = validated_data['prenom_user'],
+            email            = validated_data['email'],
+            mdp_user         = mdp_hash.decode('utf-8'),
+            role             = 'agent',
+            id_arondissement = aro,
+            id_commune       = commune,
+            date_inscription = timezone.now().date()
+        )
+        Agent.objects.create(id_user=user, matricule=matricule)
 
+        # Envoyer le mot de passe par email
+        send_mail(
+            subject = "Vos identifiants — Système État Civil",
+            message = (
+                f"Bonjour {user.prenom_user} {user.nom_user},\n\n"
+                f"Votre compte agent a été créé.\n\n"
+                f"Email      : {user.email}\n"
+                f"Mot de passe : {mdp_clair}\n\n"
+                f"Veuillez changer votre mot de passe après votre première connexion.\n\n"
+                f"Cordialement,\nSystème État Civil"
+            ),
+            from_email    = settings.EMAIL_HOST_USER,
+            recipient_list= [user.email],
+            fail_silently = False,
+        )
 
-class ArchiveSerializer(serializers.ModelSerializer):
-    id_acte = ActeSerializer(read_only=True)
-    id_acte_id = serializers.PrimaryKeyRelatedField(
-        queryset=Acte.objects.all(), source='id_acte', write_only=True
-    )
+        return user
+# ─────────────────────────────────────────────
+# Connexion
+# ─────────────────────────────────────────────
 
-    class Meta:
-        model = Archive
-        fields = '__all__'
+class LoginSerializer(serializers.Serializer):
+    email    = serializers.EmailField()
+    mdp_user = serializers.CharField(write_only=True)
 
+    def validate(self, data):
+        email    = data.get('email')
+        mdp_user = data.get('mdp_user')
 
-class DemandeSerializer(serializers.ModelSerializer):
-    id_citoyen = CitoyenSerializer(read_only=True)
-    id_agent = AgentSerializer(read_only=True)
+        try:
+            user = Utilisateur.objects.select_related(
+                'id_arondissement', 'id_commune'
+            ).get(email=email)
+        except Utilisateur.DoesNotExist:
+            raise serializers.ValidationError("Email ou mot de passe incorrect.")
 
-    id_citoyen_id = serializers.PrimaryKeyRelatedField(
-        queryset=Citoyen.objects.all(), source='id_citoyen', write_only=True
-    )
-    id_agent_id = serializers.PrimaryKeyRelatedField(
-        queryset=Agent.objects.all(), source='id_agent', write_only=True, allow_null=True, required=False
-    )
+        if not bcrypt.checkpw(mdp_user.encode('utf-8'), user.mdp_user.encode('utf-8')):
+            raise serializers.ValidationError("Email ou mot de passe incorrect.")
 
-    class Meta:
-        model = Demande
-        fields = '__all__'
-
-
-class PaiementSerializer(serializers.ModelSerializer):
-    id_demande = DemandeSerializer(read_only=True)
-    id_demande_id = serializers.PrimaryKeyRelatedField(
-        queryset=Demande.objects.all(), source='id_demande', write_only=True
-    )
-
-    class Meta:
-        model = Paiement
-        fields = '__all__'
-
-
-class DeclarationSerializer(serializers.ModelSerializer):
-    id_paiement = PaiementSerializer(read_only=True)
-    id_acte = ActeSerializer(read_only=True)
-
-    id_paiement_id = serializers.PrimaryKeyRelatedField(
-        queryset=Paiement.objects.all(), source='id_paiement', write_only=True, allow_null=True, required=False
-    )
-    id_acte_id = serializers.PrimaryKeyRelatedField(
-        queryset=Acte.objects.all(), source='id_acte', write_only=True, allow_null=True, required=False
-    )
-
-    class Meta:
-        model = Declaration
-        fields = '__all__'
-
-
-class DeclarationPieceSerializer(serializers.ModelSerializer):
-    id_declaration = DeclarationSerializer(read_only=True)
-    id_piece = serializers.PrimaryKeyRelatedField(read_only=True)
-
-    class Meta:
-        model = DeclarationPiece
-        fields = '__all__'
-
-
-class PieceJointSerializer(serializers.ModelSerializer):
-    id_demande = DemandeSerializer(read_only=True)
-    id_demande_id = serializers.PrimaryKeyRelatedField(
-        queryset=Demande.objects.all(), source='id_demande', write_only=True
-    )
-
-    class Meta:
-        model = PieceJoint
-        fields = '__all__'
-
-
-class StatistiqueSerializer(serializers.ModelSerializer):
-    id_admin = AdministrateurSerializer(read_only=True)
-    id_admin_id = serializers.PrimaryKeyRelatedField(
-        queryset=Administrateur.objects.all(), source='id_admin', write_only=True, allow_null=True, required=False
-    )
-
-    class Meta:
-        model = Statistique
-        fields = '__all__'
+        data['user'] = user
+        return data

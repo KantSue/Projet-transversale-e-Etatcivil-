@@ -3,156 +3,373 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Admin</title>
-
-    <!-- Chart.js -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiques administratives</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <style>
+        :root {
+            --bg: #f6f7fb;
+            --panel: #ffffff;
+            --text: #172033;
+            --muted: #667085;
+            --line: #d9dee8;
+            --blue: #2563eb;
+            --green: #119c73;
+            --amber: #b7791f;
+            --red: #c2413a;
+        }
+
+        * { box-sizing: border-box; }
+
         body {
-            font-family: Arial;
-            background: #f4f6f9;
             margin: 0;
-            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .page {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 28px 0 40px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
         }
 
         h1 {
-            margin-bottom: 20px;
-        }
-
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-        }
-
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .card h3 {
             margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            margin: 6px 0 0;
+            color: var(--muted);
             font-size: 14px;
-            color: gray;
         }
 
-        .card p {
-            font-size: 22px;
-            margin-top: 10px;
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
-        .filter {
-            margin: 20px 0;
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
+        a, button {
+            min-height: 38px;
+            border-radius: 6px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            color: var(--text);
+            padding: 9px 12px;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .primary {
+            border-color: var(--blue);
+            background: var(--blue);
+            color: #fff;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            padding: 16px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: grid;
+            gap: 6px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        input {
+            width: 100%;
+            min-height: 38px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 8px 10px;
+            color: var(--text);
+        }
+
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .kpi {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 112px;
+        }
+
+        .kpi span {
+            display: block;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .kpi strong {
+            display: block;
+            margin-top: 12px;
+            font-size: 26px;
+            line-height: 1.1;
+        }
+
+        .accent-blue { border-top: 4px solid var(--blue); }
+        .accent-green { border-top: 4px solid var(--green); }
+        .accent-amber { border-top: 4px solid var(--amber); }
+        .accent-red { border-top: 4px solid var(--red); }
+
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 340px;
+        }
+
+        .panel h2 {
+            margin: 0 0 14px;
+            font-size: 18px;
         }
 
         canvas {
-            background: white;
-            margin-top: 20px;
-            padding: 20px;
-            border-radius: 10px;
+            width: 100% !important;
+            height: 260px !important;
         }
 
-        button {
-            padding: 8px 15px;
-            border: none;
-            background: #007bff;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            overflow: hidden;
         }
 
-        select {
-            padding: 5px;
+        th, td {
+            padding: 11px 12px;
+            border-bottom: 1px solid var(--line);
+            text-align: left;
+            font-size: 14px;
+            vertical-align: top;
+        }
+
+        th {
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0;
+            background: #f9fafc;
+        }
+
+        tr:last-child td { border-bottom: 0; }
+
+        .section-title {
+            margin: 24px 0 10px;
+            font-size: 18px;
+        }
+
+        .empty {
+            color: var(--muted);
+            padding: 24px;
+            text-align: center;
+        }
+
+        @media (max-width: 900px) {
+            .topbar, .filters, .kpis, .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar {
+                display: grid;
+            }
         }
     </style>
 </head>
 <body>
+    <main class="page">
+        <div class="topbar">
+            <div>
+                <h1>Statistiques administratives</h1>
+                <p class="subtitle">Vue globale des demandes, traitements, communes et journaux d'activite.</p>
+            </div>
+            <div class="actions">
+                <a href="{% url 'statistiques_export' %}?date_debut={{ date_debut }}&date_fin={{ date_fin }}">Exporter CSV</a>
+                <a class="primary" href="{% url 'statistiques_api' %}?date_debut={{ date_debut }}&date_fin={{ date_fin }}">API temps reel</a>
+            </div>
+        </div>
 
-<h1>📊 Dashboard Administrateur</h1>
+        <form class="filters" method="get">
+            <label>
+                Date debut
+                <input type="date" name="date_debut" value="{{ date_debut }}">
+            </label>
+            <label>
+                Date fin
+                <input type="date" name="date_fin" value="{{ date_fin }}">
+            </label>
+            <button class="primary" type="submit">Filtrer</button>
+            <a href="{% url 'statistiques' %}">Reinitialiser</a>
+        </form>
 
-<!-- 🔎 FILTRE -->
-<div class="filter">
-    <form method="POST">
-        {% csrf_token %}
+        <section class="kpis">
+            <div class="kpi accent-blue">
+                <span>Demandes totales</span>
+                <strong>{{ kpis.demandes_total }}</strong>
+            </div>
+            <div class="kpi accent-green">
+                <span>Demandes traitees</span>
+                <strong>{{ kpis.demandes_terminees }}</strong>
+            </div>
+            <div class="kpi accent-amber">
+                <span>Delai moyen</span>
+                <strong>{% if kpis.delai_moyen_heures != None %}{{ kpis.delai_moyen_heures }} h{% else %}N/A{% endif %}</strong>
+            </div>
+            <div class="kpi accent-red">
+                <span>Taux de traitement</span>
+                <strong>{{ kpis.taux_traitement }}%</strong>
+            </div>
+            <div class="kpi">
+                <span>Citoyens inscrits</span>
+                <strong>{{ kpis.citoyens }}</strong>
+            </div>
+            <div class="kpi">
+                <span>Demandes en attente</span>
+                <strong>{{ kpis.demandes_attente }}</strong>
+            </div>
+            <div class="kpi">
+                <span>Montant collecte</span>
+                <strong>{{ kpis.collectes }} Ar</strong>
+            </div>
+            <div class="kpi">
+                <span>Periode</span>
+                <strong style="font-size:18px;">{{ date_debut }} au {{ date_fin }}</strong>
+            </div>
+        </section>
 
-        <label>Mois :</label>
-        <select name="mois">
-            <option value="">--Choisir--</option>
-            <option value="1">Janvier</option>
-            <option value="2">Février</option>
-            <option value="3">Mars</option>
-            <option value="4">Avril</option>
-            <option value="5">Mai</option>
-            <option value="6">Juin</option>
-            <option value="7">Juillet</option>
-            <option value="8">Août</option>
-            <option value="9">Septembre</option>
-            <option value="10">Octobre</option>
-            <option value="11">Novembre</option>
-            <option value="12">Décembre</option>
-        </select>
+        <section class="grid">
+            <div class="panel">
+                <h2>Demandes par type</h2>
+                <canvas id="chartTypes"></canvas>
+            </div>
+            <div class="panel">
+                <h2>Performance par statut</h2>
+                <canvas id="chartStatuts"></canvas>
+            </div>
+            <div class="panel">
+                <h2>Evolution mensuelle</h2>
+                <canvas id="chartMois"></canvas>
+            </div>
+            <div class="panel">
+                <h2>Communes les plus actives</h2>
+                <canvas id="chartCommunes"></canvas>
+            </div>
+        </section>
 
-        <label>Année :</label>
-        <select name="annee">
-            <option value="">--Choisir--</option>
-            <option value="2024">2024</option>
-            <option value="2025">2025</option>
-            <option value="2026">2026</option>
-        </select>
+        <h2 class="section-title">Communes les plus actives</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Commune</th>
+                    <th>Total demandes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for commune in communes %}
+                    <tr>
+                        <td>{{ commune.id_commune__nom_commune|default:"Non renseignee" }}</td>
+                        <td>{{ commune.total }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td class="empty" colspan="2">Aucune demande sur cette periode.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-        <button type="submit">Filtrer</button>
-    </form>
-</div>
+        <h2 class="section-title">Journaux d'activite</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Action</th>
+                    <th>Demande</th>
+                    <th>Agent</th>
+                    <th>Motif</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for journal in journaux %}
+                    <tr>
+                        <td>{{ journal.horodatage|date:"Y-m-d H:i"|default:"Non renseigne" }}</td>
+                        <td>{{ journal.action }}</td>
+                        <td>#{{ journal.demande_id|default:"-" }}</td>
+                        <td>#{{ journal.agent_id|default:"-" }}</td>
+                        <td>{{ journal.motif|default:"-" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td class="empty" colspan="5">Aucune activite sur cette periode.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
 
-<!-- 📊 CARDS -->
-<div class="cards">
-    <div class="card">
-        <h3>Citoyens</h3>
-        <p>{{ citoyens }}</p>
-    </div>
+    <script>
+        const chartData = JSON.parse('{{ chart_data|escapejs }}');
+        const palette = ['#2563eb', '#119c73', '#b7791f', '#c2413a', '#5b677a', '#7c3aed'];
 
-    <div class="card">
-        <h3>Demandes totales</h3>
-        <p>{{ demande_globale }}</p>
-    </div>
+        function renderChart(id, type, labels, values) {
+            new Chart(document.getElementById(id), {
+                type,
+                data: {
+                    labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: palette,
+                        borderColor: '#ffffff',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: type === 'doughnut', position: 'bottom' }
+                    },
+                    scales: type === 'doughnut' ? {} : { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
 
-    <div class="card">
-        <h3>Demandes validées</h3>
-        <p>{{ demande_valider }}</p>
-    </div>
-
-    <div class="card">
-        <h3>Total Collecté</h3>
-        <p>{{ collectes }} Ar</p>
-    </div>
-</div>
-
-<!-- 📈 GRAPHIQUE -->
-<canvas id="chartDemande"></canvas>
-
-<script>
-const ctx = document.getElementById('chartDemande');
-
-const chart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-        labels: ['Total', 'Validées'],
-        datasets: [{
-            label: 'Statistiques des demandes',
-            data: [
-                {{ demande_globale|default:0 }},
-                {{ demande_valider|default:0 }}
-            ]
-        }]
-    }
-});
-</script>
-
+        renderChart('chartTypes', 'bar', chartData.types.labels, chartData.types.values);
+        renderChart('chartStatuts', 'doughnut', chartData.statuts.labels, chartData.statuts.values);
+        renderChart('chartMois', 'line', chartData.mois.labels, chartData.mois.values);
+        renderChart('chartCommunes', 'bar', chartData.communes.labels, chartData.communes.values);
+    </script>
 </body>
 </html>

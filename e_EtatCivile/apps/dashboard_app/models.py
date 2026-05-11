@@ -3,12 +3,10 @@ from django.db import models
 # Create your models here.
 
 
-
 class Acte(models.Model):
     id_acte = models.AutoField(primary_key=True)
     num_acte = models.CharField(unique=True, max_length=50)
     date_acte = models.DateField()
-    temoin = models.ForeignKey('Personne', models.DO_NOTHING, db_column='temoin', blank=True, null=True)
     type_acte = models.ForeignKey('TypeActe', models.DO_NOTHING, db_column='id_type_acte')
 
     class Meta:
@@ -18,8 +16,7 @@ class Acte(models.Model):
 
 class ActeDeces(models.Model):
     id_acte = models.OneToOneField(Acte, models.DO_NOTHING, db_column='id_acte', primary_key=True)
-    defunt = models.ForeignKey('Personne', models.DO_NOTHING, db_column='defunt')
-    date_deces = models.DateField()
+    date_deces  = models.DateTimeField() 
     lieu_deces = models.CharField(max_length=150, blank=True, null=True)
     cause_deces = models.CharField(max_length=255, blank=True, null=True)
 
@@ -30,9 +27,7 @@ class ActeDeces(models.Model):
 
 class ActeMariage(models.Model):
     id_acte = models.OneToOneField(Acte, models.DO_NOTHING, db_column='id_acte', primary_key=True)
-    epoux1 = models.ForeignKey('Personne', models.DO_NOTHING, db_column='epoux1')
-    epoux2 = models.ForeignKey('Personne', models.DO_NOTHING, db_column='epoux2', related_name='actemariage_epoux2_set')
-    date_mariage = models.DateField()
+    date_mariage = models.DateTimeField() 
     lieu_mariage = models.CharField(max_length=150, blank=True, null=True)
 
     class Meta:
@@ -42,9 +37,6 @@ class ActeMariage(models.Model):
 
 class ActeNaissance(models.Model):
     id_acte = models.OneToOneField(Acte, models.DO_NOTHING, db_column='id_acte', primary_key=True)
-    enfant = models.ForeignKey('Personne', models.DO_NOTHING, db_column='enfant')
-    pere = models.ForeignKey('Personne', models.DO_NOTHING, db_column='pere', related_name='actenaissance_pere_set', blank=True, null=True)
-    mere = models.ForeignKey('Personne', models.DO_NOTHING, db_column='mere', related_name='actenaissance_mere_set', blank=True, null=True)
 
     class Meta:
         managed = False
@@ -55,11 +47,12 @@ class ActePersonne(models.Model):
     pk = models.CompositePrimaryKey('id_acte', 'id_personne')
     id_acte = models.ForeignKey(Acte, models.DO_NOTHING, db_column='id_acte')
     id_personne = models.ForeignKey('Personne', models.DO_NOTHING, db_column='id_personne')
-    role = models.CharField(max_length=100, blank=True, null=True)
+    role = models.CharField(max_length=11, blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = 'acte_personne'
+
 
 
 class Administrateur(models.Model):
@@ -89,12 +82,14 @@ class Archive(models.Model):
         managed = False
         db_table = 'archive'
 
-
 class Arondissement(models.Model):
-    id_arondissement = models.AutoField(primary_key=True)
+    id_arondissement  = models.AutoField(primary_key=True)
     num_arondissement = models.IntegerField()
-    id_commune = models.ForeignKey('Commune', models.DO_NOTHING, db_column='id_commune', blank=True, null=True)
-
+    nom_arondissement = models.CharField(max_length=100, blank=True, null=True)
+    statut            = models.CharField(max_length=20, default='disponible')
+    id_commune        = models.ForeignKey('Commune', models.DO_NOTHING,
+                                          db_column='id_commune',
+                                          blank=True, null=True)
     class Meta:
         managed = False
         db_table = 'arondissement'
@@ -178,11 +173,12 @@ class Citoyen(models.Model):
 
 
 class Commune(models.Model):
-    id_commune = models.AutoField(primary_key=True)
+    id_commune  = models.AutoField(primary_key=True)
     nom_commune = models.CharField(max_length=100)
+    nom_maire   = models.CharField(max_length=150, blank=True, null=True)  # ← ajouter
 
     class Meta:
-        managed = False
+        managed  = False
         db_table = 'commune'
 
 
@@ -218,28 +214,37 @@ class TypeActe(models.Model):
 
 
 class Demande(models.Model):
-    id_demande = models.AutoField(primary_key=True)
-    date_depot = models.DateTimeField(auto_now_add=True)
-    statut_demande = models.CharField(default='en attente', max_length=10)
-    motif_refus = models.TextField(blank=True, null=True)
-    date_maj = models.DateField(blank=True, null=True)
-    id_citoyen = models.ForeignKey(Citoyen, models.DO_NOTHING, related_name='demandes',db_column='id_citoyen')
-    id_agent = models.ForeignKey(Agent, models.DO_NOTHING, db_column='id_agent',related_name='demandes', blank=True, null=True)
-    id_acte = models.ForeignKey(Acte, models.DO_NOTHING, db_column='id_acte',related_name='demandes', blank=True, null=True)
-    id_type_acte = models.ForeignKey(TypeActe,models.DO_NOTHING,db_column='id_type_acte',related_name='demandes')
-    num_acte = models.CharField(max_length=50, blank=True, null=True)
-    id_commune = models.ForeignKey(
-        Commune,
-       models.DO_NOTHING,   # ou CASCADE selon ton besoin
-        null=True,
-        blank=True,
-        db_column='id_commune'       # garde le nom SQL exact si tu veux rester fidèle à ta table
-    )
-    num_demande=models.CharField(max_length=100)
+    id_demande        = models.AutoField(primary_key=True)
+    date_depot        = models.DateTimeField(auto_now_add=True)
+    statut_demande    = models.CharField(default='en attente', max_length=10)
+    motif_refus       = models.TextField(blank=True, null=True)
+    date_maj          = models.DateField(blank=True, null=True)
+    id_citoyen        = models.ForeignKey(Citoyen, models.DO_NOTHING,related_name='demandes',db_column='id_citoyen')
+    id_agent          = models.ForeignKey(Agent, models.DO_NOTHING,db_column='id_agent',related_name='demandes',blank=True, null=True)
+    id_acte           = models.ForeignKey(Acte, models.DO_NOTHING,db_column='id_acte',related_name='demandes',blank=True, null=True)
+    id_type_acte      = models.ForeignKey(TypeActe, models.DO_NOTHING,db_column='id_type_acte',related_name='demandes')
+    num_acte          = models.CharField(max_length=50, blank=True, null=True)
+    id_arrondissement = models.ForeignKey(Arondissement, models.DO_NOTHING,db_column='id_arrondissement',null=True, blank=True )
+    id_commune = models.ForeignKey(Commune, models.DO_NOTHING,db_column='id_commune',null=True, blank=True)
+    num_demande       = models.CharField(max_length=100)
 
     class Meta:
         managed = False
         db_table = 'demande'
+        
+class LiaisonArondissement(models.Model):
+    id_liaison     = models.AutoField(primary_key=True)
+    arondissement1 = models.ForeignKey(Arondissement, models.DO_NOTHING,
+                                       db_column='arondissement1',
+                                       related_name='liaisons_depart')
+    arondissement2 = models.ForeignKey(Arondissement, models.DO_NOTHING,
+                                       db_column='arondissement2',
+                                       related_name='liaisons_arrivee')
+    distance_km    = models.FloatField()
+
+    class Meta:
+        managed = False
+        db_table = 'liaison_arondissement'
 
 class Personne(models.Model):
     id_personne = models.AutoField(primary_key=True)
@@ -346,9 +351,11 @@ class Utilisateur(models.Model):
     email = models.CharField(unique=True, max_length=150)
     mdp_user = models.CharField(max_length=255)
     role = models.CharField(max_length=14)
-    date_inscription = models.DateField()
+    date_inscription = models.DateField(auto_now_add=True)
     id_arondissement = models.ForeignKey(Arondissement, models.DO_NOTHING, db_column='id_arondissement', blank=True, null=True)
-
+    id_commune        = models.ForeignKey(Commune, models.DO_NOTHING, 
+                                          db_column='id_commune',
+                                          blank=True, null=True)
     class Meta:
         managed = False
         db_table = 'utilisateur'

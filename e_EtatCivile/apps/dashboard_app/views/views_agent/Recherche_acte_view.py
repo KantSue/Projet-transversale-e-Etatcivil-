@@ -16,30 +16,22 @@ from apps.dashboard_app.serializers import (
     DemandeAccepteSerializer,DemandeReadSerializer,
     DemandePersonneSerializer, PersonneSerializer, DemandeCreateSerializer,DemandeSerializer,DemandeHeapSerializer
 )
-from apps.dashboard_app.models import ActeDeces,ActeNaissance,ActeMariage,Demande,DemandePersonne,Personne,JournalAudit,Acte,TypeActe
+from apps.dashboard_app.models import ActePersonne,ActeDeces,ActeNaissance,ActeMariage,Demande,DemandePersonne,Personne,JournalAudit,Acte,TypeActe
 
 def construire_trie():
     trie = Trie()
 
-    for an in ActeNaissance.objects.select_related('enfant', 'pere', 'mere', 'id_acte'):
-        acte_id = an.id_acte.id_acte
-        for personne in [an.enfant, an.pere, an.mere]:
-            if personne:
-                trie.insert(personne.nom_personne,    acte_id)
-                trie.insert(personne.prenom_personne, acte_id)
+    
+    # Une seule boucle — toutes les personnes via acte_personne
+    for ap in ActePersonne.objects.select_related('id_personne', 'id_acte'):
+        trie.insert(ap.id_personne.nom_personne,    ap.id_acte.id_acte)
+        trie.insert(ap.id_personne.prenom_personne, ap.id_acte.id_acte)
 
-    for am in ActeMariage.objects.select_related('epoux1', 'epoux2', 'id_acte'):
-        acte_id = am.id_acte.id_acte
-        for personne in [am.epoux1, am.epoux2]:
-            if personne:
-                trie.insert(personne.nom_personne,    acte_id)
-                trie.insert(personne.prenom_personne, acte_id)
+    for acte in Acte.objects.all():
+            if acte.num_acte:
+                trie.insert(acte.num_acte, acte.id_acte)
 
-    for ad in ActeDeces.objects.select_related('defunt', 'id_acte'):
-        if ad.defunt:
-            trie.insert(ad.defunt.nom_personne,    ad.id_acte.id_acte)
-            trie.insert(ad.defunt.prenom_personne, ad.id_acte.id_acte)
-
+       
     return trie
 
 

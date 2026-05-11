@@ -17,6 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path,include
 from apps.accounts_app import views
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     
@@ -24,4 +26,5 @@ urlpatterns = [
     path('dashboard/',include('apps.dashboard_app.urls')),
     path('accounts/',include('apps.accounts_app.urls')),
     path('admin/', admin.site.urls),
-]
+
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

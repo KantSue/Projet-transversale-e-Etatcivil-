@@ -1,6 +1,8 @@
-from apps.dashboard_app.views.views_admin import gestion_agents_views,gestion_demande_views,gestion_citoyens_views
-from apps.dashboard_app.views.views_agent import file_attente_views,Recherche_acte_view
-from apps.dashboard_app.views.views_citoyen import servicesCitoyens_views
+from apps.dashboard_app.views.views_admin import gestion_agents_views,gestion_demande_views,gestion_citoyens_views,statistiques_views
+from apps.dashboard_app.views.views_agent import file_attente_views,Recherche_acte_view,generate_pdf_view
+from apps.dashboard_app.views.views_citoyen import servicesCitoyens_views,paiement_view
+from apps.dashboard_app.views.views_agent import Dijkstra_view
+
 
 from apps.dashboard_app.views import CommonViews
 from django.urls import include, path
@@ -12,16 +14,21 @@ routeur.register(r'utilisateurs',gestion_citoyens_views.UtilisateurView,basename
 urlpatterns = [
     path('agents/',gestion_agents_views.GestionAgentsAPIView.as_view()),
     path('agents/<int:id_agent>/',gestion_agents_views.GestionAgentsAPIView.as_view()),
-    path("demandes/", gestion_demande_views.DemandeActeNaissViews.as_view(), name="demandes-list"),
-    path("demandes/<int:id_agent>/<int:id_demande>/", gestion_demande_views.DemandeActeNaissViews.as_view(), name="demandes-confirmation"),
-
-   path("demandes/<int:id_demande>/", gestion_demande_views.DemandeActeNaissViews.as_view(), name="demandes"),
-    # #Citoyen
-    # path('citoyens/',gestion_citoyens_views.GestionClient.as_view()),
-    # path('citoyens/<int:id_citoyen>/',gestion_citoyens_views.GestionClient.as_view()),
     
+# Les URLs deviennent
+    path("demandes/",gestion_demande_views.DemandeActeViews.as_view()),
+    path("demandes/<int:id_demande>/",gestion_demande_views.DemandeActeViews.as_view()),
+    path("demandes/<int:id_agent>/<int:id_demande>/", gestion_demande_views.DemandeActeViews.as_view()),
     path("recherche/", Recherche_acte_view.SearchActeView.as_view(), name="demandes"),
     path("recherche/suggestions/", Recherche_acte_view.SuggestionsView.as_view(), name="suggestions"),
+
+    path('arrondissements/<int:id_arondissement>/verifier/',Dijkstra_view.VerifierArondissementView.as_view(), name='verifier-arrondissement'),
+    path('demandes/<int:id_demande>/acte/pdf/',generate_pdf_view.GeneratePDFView.as_view(),name='generer-pdf'),
+    
+    path('paiements/', paiement_view.PaiementEtDemandeView.as_view(), name='paiement'),
+    path('statistiques/', statistiques_views.stat, name='statistiques'),
+    path('statistiques/api/', statistiques_views.StatistiquesAPIView.as_view(), name='statistiques_api'),
+    path('statistiques/export/', statistiques_views.export_statistiques_csv, name='statistiques_export'),
 
     path('',include(routeur.urls)),
     

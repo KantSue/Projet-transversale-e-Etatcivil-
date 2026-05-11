@@ -1,0 +1,34 @@
+
+POST http://127.0.0.1:8000/accounts/login/
+Content-Type: application/json
+
+{
+    "email"   : "julie@gmail.com",
+    "mdp_user": "citoyenEC"
+}
+
+###
+POST http://127.0.0.1:8000/accounts/register/
+Content-Type: application/json
+
+{
+    "nom_user"        : "Julie",
+    "prenom_user"     : "Maya",
+    "email"           : "julie2@gmail.com",
+    "mdp_user"        : "citoyenEC",
+    "id_commune"      : 1,
+    "id_arondissement": 1
+}
+
+###
+GET http://127.0.0.1:8000/accounts/profil/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6Ikx1Y2llQGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbmlzdHJhdGV1ciIsIm5vbSI6Ikx1Y2llIFJha290byIsImlkX2Fyb25kaXNzZW1lbnQiOjEsImlkX2NvbW11bmUiOjEsImV4cCI6MTc3ODUyMjEwM30.R7fMYjCzZ-Lw2oycK8_EDQyyu_6PNloTkVgbZ9SSnKU
+###
+PATCH http://127.0.0.1:8000/accounts/profil/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6Ikx1Y2llQGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbmlzdHJhdGV1ciIsIm5vbSI6Ikx1Y2llIFJha290byIsImlkX2Fyb25kaXNzZW1lbnQiOjEsImlkX2NvbW11bmUiOjEsImV4cCI6MTc3ODUyMjEwM30.R7fMYjCzZ-Lw2oycK8_EDQyyu_6PNloTkVgbZ9SSnKU
+
+{
+    "email": "magie@gmail.com"
+}
