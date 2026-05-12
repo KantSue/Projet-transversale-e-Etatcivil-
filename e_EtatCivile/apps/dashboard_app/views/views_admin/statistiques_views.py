@@ -1,123 +1,143 @@
-import csv
-import json
-
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
-from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.db.models import Count, Avg, Sum, F
+from django.utils import timezone
+from datetime import timedelta
 
-from apps.accounts_app.services import verify_jwt
-from apps.dashboard_app.services.statistiques_service import (
-    construire_statistiques,
-    donnees_graphiques,
-    periode_depuis_requete,
+from apps.dashboard_app.models import (
+    Demande, Paiement, JournalAudit, TypeActe, Commune
 )
+from apps.accounts_app.services import verify_jwt
 
 
-def _get_token(request):
-    auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        return auth_header.split(" ", 1)[1]
-    return request.COOKIES.get("token")
-
-
-def _admin_payload(request):
-    token = _get_token(request)
+def check_admin(request):
+    token   = request.COOKIES.get('token') or \
+              request.headers.get('Authorization', '').replace('Bearer ', '')
     payload = verify_jwt(token) if token else None
-    role = str(payload.get("role", "")).lower() if payload else ""
-    if payload and role == "administrateur":
-        return payload
-    return None
+    if not payload or payload.get('role', '').lower() != 'administrateur':
+        return None
+    return payload
 
 
-def _forbidden_response(request):
-    if request.headers.get("accept", "").find("application/json") >= 0:
-        return JsonResponse({"error": "Acces reserve aux administrateurs."}, status=403)
-    return HttpResponse("Acces reserve aux administrateurs.", status=403)
-
-
-def stat(request):
-    if not _admin_payload(request):
-        return _forbidden_response(request)
-
-    date_debut, date_fin, debut_dt, fin_dt = periode_depuis_requete(request)
-    stats = construire_statistiques(debut_dt, fin_dt)
-    graphiques = donnees_graphiques(stats)
-
-    context = {
-        "date_debut": date_debut.isoformat(),
-        "date_fin": date_fin.isoformat(),
-        "kpis": stats["kpis"],
-        "demandes_par_type": stats["demandes_par_type"],
-        "demandes_par_statut": stats["demandes_par_statut"],
-        "communes": stats["communes"],
-        "journaux": stats["journaux"],
-        "chart_data": json.dumps(graphiques),
-    }
-    return render(request, "dash_admin/statistiques.html", context)
-
-
-class StatistiquesAPIView(APIView):
+class StatistiquesView(APIView):
+    """
+    GET /dashboard/stats/
+    Tableau de bord global — admin uniquement.
+    """
     def get(self, request):
-        if not _admin_payload(request):
-            return Response({"error": "Acces reserve aux administrateurs."}, status=status.HTTP_403_FORBIDDEN)
+        if not check_admin(request):
+            return Response({"error": "Acces reserve aux administrateurs."}, status=403)
 
-        date_debut, date_fin, debut_dt, fin_dt = periode_depuis_requete(request)
-        stats = construire_statistiques(debut_dt, fin_dt)
-        data = {
-            "periode": {
-                "date_debut": date_debut.isoformat(),
-                "date_fin": date_fin.isoformat(),
+        # 1. Statuts des demandes
+        statuts = Demande.objects.values('statut_demande').annotate(
+            total=Count('id_demande')
+        )
+        statuts_dict = {s['statut_demande']: s['total'] for s in statuts}
+
+        # 2. Demandes par type d'acte
+        par_type = Demande.objects.values(
+            libelle=F('id_type_acte__libelle')
+        ).annotate(total=Count('id_demande')).order_by('-total')
+
+        # 3. Demandes par commune
+        par_commune = Demande.objects.filter(
+            id_commune__isnull=False
+        ).values(
+            commune=F('id_commune__nom_commune')
+        ).annotate(total=Count('id_demande')).order_by('-total')
+
+        # 4. Délai moyen de traitement (date_maj - date_depot en jours)
+        demandes_terminees = Demande.objects.filter(
+            statut_demande='TERMINER',
+            date_maj__isnull=False
+        )
+        delai_moyen = 0
+        if demandes_terminees.exists():
+            total_jours = sum(
+                (d.date_maj - d.date_depot.date()).days
+                for d in demandes_terminees
+                if d.date_maj and d.date_depot
+            )
+            delai_moyen = round(total_jours / demandes_terminees.count(), 1)
+
+        # 5. Paiements
+        paiements = Paiement.objects.aggregate(
+            total_confirme = Count('id_paiement', filter=__import__('django.db.models', fromlist=['Q']).Q(statut_paiement='confirme')),
+            montant_total  = Sum('montant', filter=__import__('django.db.models', fromlist=['Q']).Q(statut_paiement='confirme')),
+            total_echoue   = Count('id_paiement', filter=__import__('django.db.models', fromlist=['Q']).Q(statut_paiement='echoue'))
+        )
+
+        # 6. Journal récent (10 dernières actions)
+        journal = JournalAudit.objects.select_related(
+            'agent__id_user', 'demande'
+        ).order_by('-horodatage')[:10]
+
+        journal_data = [{
+            "agent"   : f"{j.agent.id_user.nom_user} {j.agent.id_user.prenom_user}",
+            "action"  : j.action,
+            "demande" : j.demande.id_demande if j.demande else None,
+            "motif"   : j.motif or "",
+            "date"    : j.horodatage.strftime("%Y-%m-%d %H:%M") if j.horodatage else "N/A"
+        } for j in journal if j.agent and j.agent.id_user]
+
+        return Response({
+            "demandes": {
+                "total"     : Demande.objects.count(),
+                "en_attente": statuts_dict.get('en attente', 0),
+                "valider"   : statuts_dict.get('VALIDER', 0),
+                "refuser"   : statuts_dict.get('REFUSER', 0),
+                "terminer"  : statuts_dict.get('TERMINER', 0),
             },
-            "kpis": stats["kpis"],
-            "graphiques": donnees_graphiques(stats),
-            "demandes_par_type": stats["demandes_par_type"],
-            "demandes_par_statut": stats["demandes_par_statut"],
-            "communes": stats["communes"],
-            "journaux": [
-                {
-                    "id_journal": journal.id_journal,
-                    "action": journal.action,
-                    "motif": journal.motif,
-                    "horodatage": journal.horodatage.isoformat() if journal.horodatage else None,
-                    "demande": journal.demande_id,
-                    "agent": journal.agent_id,
-                }
-                for journal in stats["journaux"]
-            ],
-        }
-        return Response(data, status=status.HTTP_200_OK)
+            "par_type"         : list(par_type),
+            "par_commune"      : list(par_commune),
+            "delai_moyen_jours": delai_moyen,
+            "paiements"        : paiements,
+            "journal_recent"   : journal_data
+        }, status=200)
 
 
-def export_statistiques_csv(request):
-    if not _admin_payload(request):
-        return _forbidden_response(request)
+class DemandesJourView(APIView):
+    """
+    GET /dashboard/stats/demandes-jour/
+    Toutes les demandes traitées aujourd'hui avec l'agent qui les a prises.
+    """
+    def get(self, request):
+        if not check_admin(request):
+            return Response({"error": "Acces reserve aux administrateurs."}, status=403)
 
-    date_debut, date_fin, debut_dt, fin_dt = periode_depuis_requete(request)
-    stats = construire_statistiques(debut_dt, fin_dt)
+        aujourd_hui = timezone.now().date()
 
-    response = HttpResponse(content_type="text/csv")
-    response["Content-Disposition"] = (
-        f'attachment; filename="statistiques_{date_debut.isoformat()}_{date_fin.isoformat()}.csv"'
-    )
-    writer = csv.writer(response)
-    writer.writerow(["Rapport administratif anonymise"])
-    writer.writerow(["Periode", date_debut.isoformat(), date_fin.isoformat()])
-    writer.writerow([])
+        # Demandes traitées aujourd'hui via journal_audit
+        journaux = JournalAudit.objects.select_related(
+            'demande__id_type_acte',
+            'demande__id_commune',
+            'agent__id_user'
+        ).filter(
+            horodatage__date=aujourd_hui
+        ).order_by('-horodatage')
 
-    writer.writerow(["Indicateur", "Valeur"])
-    for cle, valeur in stats["kpis"].items():
-        writer.writerow([cle, "" if valeur is None else valeur])
-    writer.writerow([])
+        data = []
+        vus  = set()
 
-    writer.writerow(["Demandes par type", "Total"])
-    for item in stats["demandes_par_type"]:
-        writer.writerow([item["id_type_acte__libelle"] or "Non renseigne", item["total"]])
-    writer.writerow([])
+        for j in journaux:
+            if j.demande.id_demande in vus:
+                continue
+            vus.add(j.demande.id_demande)
 
-    writer.writerow(["Communes les plus actives", "Total"])
-    for item in stats["communes"]:
-        writer.writerow([item["id_commune__nom_commune"] or "Non renseignee", item["total"]])
+            data.append({
+                "id_demande" : j.demande.id_demande,
+                "num_demande": j.demande.num_demande,
+                "type_acte"  : j.demande.id_type_acte.libelle if j.demande.id_type_acte else "N/A",
+                "commune"    : j.demande.id_commune.nom_commune if j.demande.id_commune else "N/A",
+                "statut"     : j.demande.statut_demande,
+                "agent"      : f"{j.agent.id_user.nom_user} {j.agent.id_user.prenom_user}",
+                "action"     : j.action,
+                "motif"      : j.motif or "",
+                "heure"      : j.horodatage.strftime("%H:%M")
+            })
 
-    return response
+        return Response({
+            "date"   : str(aujourd_hui),
+            "total"  : len(data),
+            "demandes": data
+        }, status=200)

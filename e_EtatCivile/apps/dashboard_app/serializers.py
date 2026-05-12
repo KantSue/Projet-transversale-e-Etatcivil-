@@ -206,12 +206,15 @@ class ArchiveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Archive
         fields = '__all__'
-
+        
 class DemandePersonneSerializer(serializers.ModelSerializer):
-    personne=PersonneSerializer()
+    personne = PersonneSerializer(read_only=True)
+
     class Meta:
-        model=DemandePersonne
-        fields='__all__'
+        model  = DemandePersonne
+        fields = ['id_demande_personne', 'role', 'personne']
+        # Ne pas inclure 'demande' pour éviter la récursion
+        
 class DemandeSerializer(serializers.ModelSerializer):
      class Meta:
         model=Demande
@@ -235,10 +238,11 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
     pere_defunt = PersonneSerializer(required=False, allow_null=True)
     mere_defunt = PersonneSerializer(required=False, allow_null=True)
 
-    id_arrondissement = serializers.PrimaryKeyRelatedField(
-        queryset=Arondissement.objects.all(),
-        required=False, allow_null=True
-    )
+    id_arrondissement = serializers.PrimaryKeyRelatedField(  # ← corriger aussi ici
+            queryset=Arondissement.objects.all(),
+            required=False, allow_null=True
+        )
+
 
     class Meta:
         model  = Demande
@@ -248,10 +252,10 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         type_acte  = data.get('id_type_acte')
         id_commune = data.get('id_commune')
-        id_aro     = data.get('id_arrondissement')
+        id_arrondissement = data.get('id_arrondissement')
 
         # Arrondissement obligatoire pour Antananarivo
-        if id_commune and id_commune.id_commune == 1 and not id_aro:
+        if id_commune and id_commune.id_commune == 1 and not id_arrondissement:
             raise serializers.ValidationError(
                 "L'arrondissement est obligatoire pour Antananarivo."
             )
@@ -297,13 +301,7 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
             'enfant'     : validated_data.pop('enfant',      None),
             'epoux1'     : validated_data.pop('epoux1',      None),
             'epoux2'     : validated_data.pop('epoux2',      None),
-            'pere_epoux1': validated_data.pop('pere_epoux1', None),
-            'mere_epoux1': validated_data.pop('mere_epoux1', None),
-            'pere_epoux2': validated_data.pop('pere_epoux2', None),
-            'mere_epoux2': validated_data.pop('mere_epoux2', None),
             'defunt'     : validated_data.pop('defunt',      None),
-            'pere_defunt': validated_data.pop('pere_defunt', None),
-            'mere_defunt': validated_data.pop('mere_defunt', None),
         }
 
         validated_data['num_demande'] = generer_num_demande()
@@ -324,14 +322,24 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
         return demande
 
 class DemandeReadSerializer(serializers.ModelSerializer):
-    personnes = DemandePersonneSerializer(
-        source='demandepersonne',  
-        many=True
-    )
+    personnes = DemandePersonneSerializer(source='demandepersonne',many=True,read_only=True)
+    type_acte       = serializers.CharField(source='id_type_acte.libelle', default='N/A')
+    commune         = serializers.CharField(source='id_commune.nom_commune', default='N/A')
+    arrondissement  = serializers.CharField(source='id_arrondissement.nom_arondissement', default=None)
+    citoyen         = serializers.SerializerMethodField()
 
     class Meta:
-        model = Demande
+        model  = Demande
         fields = '__all__'
+
+    def get_citoyen(self, obj):
+        try:
+            if obj.id_citoyen:
+                u = obj.id_citoyen.id_user  # Citoyen → Utilisateur
+                return f"{u.nom_user} {u.prenom_user}"
+        except Exception:
+            pass
+        return "N/A"
         
 class DemandeRefuSerializer(serializers.ModelSerializer):
     class Meta:

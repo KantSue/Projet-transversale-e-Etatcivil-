@@ -2,13 +2,15 @@ from datetime import date
 
 from django.shortcuts import render
 from django.http import JsonResponse
-from django.db.models import Count, Q
 
 from apps.dashboard_app.models import Utilisateur, Demande
 from apps.accounts_app.services import verify_jwt
 from apps.dashboard_app.services.service_citoyen import generateNumActe
-from apps.dashboard_app.models import Acte, ActeNaissance, Personne
+from apps.dashboard_app.models import Acte, ActeNaissance
 from apps.dashboard_app.form import PersonneForm, ActeNaissanceForm
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from apps.accounts_app.services import verify_jwt
 
 
 def services(request):
@@ -85,3 +87,26 @@ def servicesActeNaissance(request):
         "mere_form": mere_form,
         "acte_naissance_form": acte_naissance_form
     })
+    
+class MesDemandesView(APIView):
+    def get(self, request):
+        token   = request.COOKIES.get('token') or \
+                  request.headers.get('Authorization', '').replace('Bearer ', '')
+        payload = verify_jwt(token) if token else None
+        if not payload:
+            return Response({"error": "Non authentifié"}, status=401)
+
+        demandes = Demande.objects.filter(
+            id_citoyen=payload['user_id']
+        ).order_by('-date_depot')
+
+        data = [{
+            "id_demande"    : d.id_demande,
+            "num_demande"   : d.num_demande,
+            "statut_demande": d.statut_demande,
+            "type_acte"     : d.id_type_acte.libelle if d.id_type_acte else "N/A",
+            "date_depot"    : str(d.date_depot),
+            "motif_refus"   : d.motif_refus if hasattr(d, 'motif_refus') else None,
+        } for d in demandes]
+
+        return Response(data, status=200)

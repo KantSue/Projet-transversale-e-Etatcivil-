@@ -73,5 +73,23 @@ class SuggestionsView(APIView):
         trie = construire_trie()          # reconstruit à chaque requête
         ids  = trie.search_prefix(query)
         actes = Acte.objects.filter(id_acte__in=ids)
-        serializer = ActeSerializer(actes, many=True)
-        return Response(serializer.data, status=200)
+        # Au lieu de retourner juste les actes, enrichissez avec les personnes
+        resultats = []
+        for acte in actes:
+            # Chercher les personnes liées à cet acte
+            personnes = ActePersonne.objects.filter(
+                id_acte=acte.id_acte
+            ).select_related('id_personne')
+            
+            noms = [
+                f"{p.id_personne.prenom_personne} {p.id_personne.nom_personne}"
+                for p in personnes
+            ]
+            
+            resultats.append({
+                "id_acte"  : acte.id_acte,
+                "num_acte" : acte.num_acte,
+                "date_acte": str(acte.date_acte),
+                "personnes": noms
+            })
+        return Response(resultats, status=200)

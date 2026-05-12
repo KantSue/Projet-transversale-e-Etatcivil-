@@ -19,6 +19,9 @@ urlpatterns = [
     path("demandes/",gestion_demande_views.DemandeActeViews.as_view()),
     path("demandes/<int:id_demande>/",gestion_demande_views.DemandeActeViews.as_view()),
     path("demandes/<int:id_agent>/<int:id_demande>/", gestion_demande_views.DemandeActeViews.as_view()),
+    path('demandes/citoyen/', servicesCitoyens_views.MesDemandesView.as_view(), name='mes-demandes'),
+    path('demandes/', file_attente_views.FileAttenteView.as_view(), name='file-attente'),
+    
     path("recherche/", Recherche_acte_view.SearchActeView.as_view(), name="demandes"),
     path("recherche/suggestions/", Recherche_acte_view.SuggestionsView.as_view(), name="suggestions"),
 
@@ -26,10 +29,13 @@ urlpatterns = [
     path('demandes/<int:id_demande>/acte/pdf/',generate_pdf_view.GeneratePDFView.as_view(),name='generer-pdf'),
     
     path('paiements/', paiement_view.PaiementEtDemandeView.as_view(), name='paiement'),
-    path('statistiques/', statistiques_views.stat, name='statistiques'),
-    path('statistiques/api/', statistiques_views.StatistiquesAPIView.as_view(), name='statistiques_api'),
-    path('statistiques/export/', statistiques_views.export_statistiques_csv, name='statistiques_export'),
 
+    path('stats/',              statistiques_views.StatistiquesView.as_view(),   name='stats'),
+    path('stats/demandes-jour/', statistiques_views.DemandesJourView.as_view(), name='stats-jour'),
+    
+    # Dans urls.py
+    path('actes/<int:id_acte>/', gestion_demande_views.ActeDetailView.as_view(), name='acte-detail'),
+    path('demandes/<int:id_demande>/pdf/',generate_pdf_view.PdfCitoyenView.as_view(), name='pdf-citoyen'),
     path('',include(routeur.urls)),
     
     

@@ -227,7 +227,8 @@ class Demande(models.Model):
     id_arrondissement = models.ForeignKey(Arondissement, models.DO_NOTHING,db_column='id_arrondissement',null=True, blank=True )
     id_commune = models.ForeignKey(Commune, models.DO_NOTHING,db_column='id_commune',null=True, blank=True)
     num_demande       = models.CharField(max_length=100)
-
+    url_pdf = models.CharField(max_length=255, null=True, blank=True)
+    
     class Meta:
         managed = False
         db_table = 'demande'
@@ -332,14 +333,14 @@ class Paiement(models.Model):
 
 
 class PieceJoint(models.Model):
-    id_piece = models.AutoField(primary_key=True)
-    date_depot = models.DateField()
-    type_fichier = models.CharField(max_length=50)
+    id_piece    = models.AutoField(primary_key=True)
+    date_depot  = models.DateField(auto_now_add=True)
+    type_fichier= models.CharField(max_length=50)
     url_fichier = models.CharField(max_length=255)
-    id_demande = models.ForeignKey(Demande, models.DO_NOTHING, db_column='id_demande')
-
+    id_demande  = models.ForeignKey(Demande, models.DO_NOTHING,
+                                    db_column='id_demande')
     class Meta:
-        managed = False
+        managed  = False
         db_table = 'piece_joint'
 
 

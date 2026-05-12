@@ -1,11 +1,19 @@
 
-GET http://127.0.0.1:8000/dashboard/demandes/10/
+GET http://127.0.0.1:8000/dashboard/demandes/34/
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5LCJlbWFpbCI6Imhpa29yaWFudHNvYWdsb3JpYUBnbWFpbC5jb20iLCJyb2xlIjoiQWdlbnQiLCJub20iOiJHbG9yaWEgSGlrb3JpYW50c29hIiwiaWRfYXJvbmRpc3NlbWVudCI6MSwiaWRfY29tbXVuZSI6MSwiZXhwIjoxNzc4NjQ0Mjk2fQ._82bRBt-nrUNSfu0sWSZxzApOJdIdBdYXV5KWhl1lKg
+
 
 ###
-
-GET http://127.0.0.1:8000/dashboard/recherche/?q=NAISS-2024-001
+GET http://127.0.0.1:8000/dashboard/actes/1/
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5LCJlbWFpbCI6Imhpa29yaWFudHNvYWdsb3JpYUBnbWFpbC5jb20iLCJyb2xlIjoiQWdlbnQiLCJub20iOiJHbG9yaWEgSGlrb3JpYW50c29hIiwiaWRfYXJvbmRpc3NlbWVudCI6MSwiaWRfY29tbXVuZSI6MSwiZXhwIjoxNzc4NjQ4OTcxfQ.gtNvG25GSrGXty_238TvJC7oMfmb2ZCV-fBKbkxRGEM
+
+###
+GET http://127.0.0.1:8000/dashboard/recherche/suggestions/?q=rak
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5LCJlbWFpbCI6Imhpa29yaWFudHNvYWdsb3JpYUBnbWFpbC5jb20iLCJyb2xlIjoiQWdlbnQiLCJub20iOiJHbG9yaWEgSGlrb3JpYW50c29hIiwiaWRfYXJvbmRpc3NlbWVudCI6MSwiaWRfY29tbXVuZSI6MSwiZXhwIjoxNzc4NjQ4OTcxfQ.gtNvG25GSrGXty_238TvJC7oMfmb2ZCV-fBKbkxRGEM
+
 
 ###
 PUT http://127.0.0.1:8000/dashboard/agents/1
@@ -138,28 +146,29 @@ POST http://127.0.0.1:8000/accounts/login/
 Content-Type: application/json
 
 {
-    "email": "Lucie@gmail.com",
-    "mdp_user": "123"
+    "email": "hikoriantsoagloria@gmail.com",
+    "mdp_user": "vnX)74r1"
 }
 
+###
+POST http://127.0.0.1:8000/accounts/register/
+Content-Type: application/json
+
+{
+    "nom_user"        : "Test",
+    "prenom_user"     : "Mobile",
+    "email"           : "mobile@test.mg",
+    "mdp_user"        : "123456",
+    "id_commune"      : 2
+}
 ###
 @adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6Ikx1Y2llQGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbmlzdHJhdGV1ciIsIm5vbSI6Ikx1Y2llIFJha290byIsImlkX2Fyb25kaXNzZW1lbnQiOjEsImlkX2NvbW11bmUiOjEsImV4cCI6MTc3ODU1ODM5MH0.t9aE_JakAjGsrWxDslxW3BGroZJt6S-9jeqEDT6mlic
 
 ###
-# F7 - Tableau de bord statistiques en JSON
-GET http://127.0.0.1:8000/dashboard/statistiques/api/?date_debut=2026-01-01&date_fin=2026-12-31
-Authorization: Bearer {{adminToken}}
-Accept: application/json
+# F7 - Tableau de bord statistiques en JSONGET http://127.0.0.1:8000/dashboard/stats/
+GET http://127.0.0.1:8000/dashboard/stats/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6Ikx1Y2llQGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbmlzdHJhdGV1ciIsIm5vbSI6Ikx1Y2llIFJha290byIsImlkX2Fyb25kaXNzZW1lbnQiOjEsImlkX2NvbW11bmUiOjEsImV4cCI6MTc3ODYwMzg3MX0.2cfYSkFq_Uc8fnSDUsIHH_ZA1n108HcTvR9xDtmsJCI
 
 ###
-# F7 - Export CSV anonymise des statistiques
-GET http://127.0.0.1:8000/dashboard/statistiques/export/?date_debut=2026-01-01&date_fin=2026-12-31
-Authorization: Bearer {{adminToken}}
-Accept: text/csv
-
-###
-# F7 - Page HTML du tableau de bord
-# A ouvrir dans le navigateur avec un cookie token admin, ou a tester ici si ton client REST envoie le token.
-GET http://127.0.0.1:8000/dashboard/statistiques/?date_debut=2026-01-01&date_fin=2026-12-31
-Authorization: Bearer {{adminToken}}
-Accept: text/html
+GET http://127.0.0.1:8000/dashboard/stats/demandes-jour/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6Ikx1Y2llQGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbmlzdHJhdGV1ciIsIm5vbSI6Ikx1Y2llIFJha290byIsImlkX2Fyb25kaXNzZW1lbnQiOjEsImlkX2NvbW11bmUiOjEsImV4cCI6MTc3ODYwMzg3MX0.2cfYSkFq_Uc8fnSDUsIHH_ZA1n108HcTvR9xDtmsJCI
