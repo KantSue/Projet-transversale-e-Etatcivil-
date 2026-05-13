@@ -1,5 +1,5 @@
 import bcrypt
-from rest_framework.views import APIView
+from rest_framework.views import APIView, settings
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
@@ -156,11 +156,12 @@ class ProfilView(APIView):
 
         # Champs autorisés selon le rôle
         CHAMPS_PAR_ROLE = {
-            'citoyen'       : ['nom_user', 'prenom_user', 'mdp_user'],
+            'citoyen'       : ['nom_user', 'prenom_user', 'mdp_user', 'id_commune', 'id_arondissement'],
             'agent'         : ['nom_user', 'prenom_user', 'mdp_user'],
             'administrateur': ['nom_user', 'prenom_user', 'mdp_user', 'email'],
         }
-        champs_autorises = CHAMPS_PAR_ROLE.get(payload['role'], [])
+
+        champs_autorises = CHAMPS_PAR_ROLE.get(user.role, [])
 
         for champ in champs_autorises:
             if champ in request.data:
@@ -168,12 +169,32 @@ class ProfilView(APIView):
                     nouveau_mdp   = request.data['mdp_user']
                     mdp_hash      = bcrypt.hashpw(nouveau_mdp.encode('utf-8'), bcrypt.gensalt())
                     user.mdp_user = mdp_hash.decode('utf-8')
-                elif champ == 'email':
-                    # Vérifier unicité pour admin
-                    nouvel_email = request.data['email']
-                    if Utilisateur.objects.filter(email=nouvel_email).exclude(id_user=user.id_user).exists():
-                        return Response({"error": "Email déjà utilisé."}, status=400)
-                    user.email = nouvel_email
+                elif champ == 'id_commune':
+                    try:
+                        commune     = Commune.objects.get(id_commune=request.data['id_commune'])
+                        user.id_commune = commune
+                    except Commune.DoesNotExist:
+                        return Response({"error": "Commune introuvable"}, status=400)
+                elif champ == 'id_arondissement':
+                    id_aro = request.data.get('id_arondissement')
+                    if id_aro:
+                        try:
+                            aro = Arondissement.objects.get(id_arondissement=id_aro)
+                            user.id_arondissement = aro
+                        except Arondissement.DoesNotExist:
+                            return Response({"error": "Arrondissement introuvable"}, status=400)
+                    else:
+                        user.id_arondissement = None
+                elif champ == 'mdp_user':
+                        ancien_mdp = request.data.get('ancien_mdp')
+                        if not ancien_mdp:
+                            return Response({"error": "Ancien mot de passe requis"}, status=400)
+                        if not bcrypt.checkpw(ancien_mdp.encode('utf-8'), user.mdp_user.encode('utf-8')):
+                            return Response({"error": "Ancien mot de passe incorrect"}, status=400)
+                        nouveau_mdp   = request.data['mdp_user']
+                        mdp_hash      = bcrypt.hashpw(nouveau_mdp.encode('utf-8'), bcrypt.gensalt())
+                        user.mdp_user = mdp_hash.decode('utf-8')
+                    
                 else:
                     setattr(user, champ, request.data[champ])
 
@@ -189,6 +210,41 @@ class ProfilView(APIView):
                 "email": user.email,
             }
         }, status=200)
+        
+class MotDePasseOublieView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({"error": "Email requis"}, status=400)
+
+        try:
+            user = Utilisateur.objects.get(email=email)
+        except Utilisateur.DoesNotExist:
+            return Response({"error": "Aucun compte associé à cet email"}, status=404)
+
+        # Générer nouveau mot de passe
+        import random, string
+        nouveau_mdp = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        mdp_hash    = bcrypt.hashpw(nouveau_mdp.encode('utf-8'), bcrypt.gensalt())
+        user.mdp_user = mdp_hash.decode('utf-8')
+        user.save()
+
+        # Envoyer par email
+        from django.core.mail import send_mail
+        send_mail(
+            subject    = "Réinitialisation mot de passe — État Civil",
+            message    = (
+                f"Bonjour {user.prenom_user} {user.nom_user},\n\n"
+                f"Votre nouveau mot de passe : {nouveau_mdp}\n\n"
+                f"Veuillez le changer après connexion.\n\n"
+                f"Cordialement,\nService État Civil"
+            ),
+            from_email    = settings.EMAIL_HOST_USER,
+            recipient_list= [email],
+            fail_silently = False,
+        )
+
+        return Response({"message": f"Nouveau mot de passe envoyé à {email}"}, status=200)
 # ─────────────────────────────────────────────
 # Liste des communes et arrondissements
 # (utile pour le formulaire d'inscription)

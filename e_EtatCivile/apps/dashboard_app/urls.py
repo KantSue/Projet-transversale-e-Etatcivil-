@@ -1,5 +1,5 @@
-from apps.dashboard_app.views.views_admin import gestion_agents_views,gestion_demande_views,gestion_citoyens_views,statistiques_views
-from apps.dashboard_app.views.views_agent import file_attente_views,Recherche_acte_view,generate_pdf_view
+from apps.dashboard_app.views.views_admin import actes_views,gestion_agents_views,gestion_demande_views,gestion_citoyens_views,statistiques_views,gestion_commune_view
+from apps.dashboard_app.views.views_agent import historiques_view,file_attente_views,Recherche_acte_view,generate_pdf_view
 from apps.dashboard_app.views.views_citoyen import servicesCitoyens_views,paiement_view
 from apps.dashboard_app.views.views_agent import Dijkstra_view
 
@@ -14,7 +14,7 @@ routeur.register(r'utilisateurs',gestion_citoyens_views.UtilisateurView,basename
 urlpatterns = [
     path('agents/',gestion_agents_views.GestionAgentsAPIView.as_view()),
     path('agents/<int:id_agent>/',gestion_agents_views.GestionAgentsAPIView.as_view()),
-    
+    path('demandes/historique/', historiques_view.HistoriqueAgentView.as_view(), name='historique-agent'),
 # Les URLs deviennent
     path("demandes/",gestion_demande_views.DemandeActeViews.as_view()),
     path("demandes/<int:id_demande>/",gestion_demande_views.DemandeActeViews.as_view()),
@@ -34,8 +34,14 @@ urlpatterns = [
     path('stats/demandes-jour/', statistiques_views.DemandesJourView.as_view(), name='stats-jour'),
     
     # Dans urls.py
+    path('actes/', actes_views.ActesListView.as_view(), name='actes-list'),
     path('actes/<int:id_acte>/', gestion_demande_views.ActeDetailView.as_view(), name='acte-detail'),
+    path('demandes/<int:id_demande>/envoyer-pdf/', generate_pdf_view.EnvoyerPDFView.as_view(), name='envoyer-pdf'),
     path('demandes/<int:id_demande>/pdf/',generate_pdf_view.PdfCitoyenView.as_view(), name='pdf-citoyen'),
+    
+    path('arrondissements/public/', gestion_agents_views.ArrondissementsPublicView.as_view()),
+    path('arrondissements/', gestion_commune_view.GestionArondissementView.as_view()),
+    path('arrondissements/<int:id_arondissement>/', gestion_commune_view.GestionArondissementView.as_view()),
     path('',include(routeur.urls)),
     
     

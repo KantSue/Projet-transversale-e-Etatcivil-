@@ -133,7 +133,7 @@ EMAIL_HOST='smtp.gmail.com'
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
 EMAIL_HOST_USER='hitoerantsoagrace@gmail.com'
-EMAIL_HOST_PASSWORD='lkuy dzza bjns eows'
+EMAIL_HOST_PASSWORD='lkuy dzza bjns eows' 
 
 
 MEDIA_URL  = '/media/'

@@ -26,7 +26,7 @@ class PaiementEtDemandeView(APIView):
 
         # 2. Vérifications de base
         numero_tel   = request.data.get('numero_tel')
-        id_type_acte = request.data.get('id_type_acte')
+        id_type_acte = int(request.data.get('id_type_acte', 1))
         num_acte     = request.data.get('num_acte')
         photo        = request.FILES.get('photo_ci')
 
@@ -40,7 +40,8 @@ class PaiementEtDemandeView(APIView):
             return Response({"error": "Photo CIN obligatoire"}, status=400)
 
         # 3. Simuler le paiement
-        result_paiement = simuler_paiement(id_type_acte, numero_tel)
+        nb_exemplaires  = int(request.data.get('nb_exemplaires', 1))
+        result_paiement = simuler_paiement(id_type_acte, numero_tel, nb_exemplaires)
         if result_paiement['statut'] == 'echoue':
             return Response({
                 "error"    : result_paiement['message'],

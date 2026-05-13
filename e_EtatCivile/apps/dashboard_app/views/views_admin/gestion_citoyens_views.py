@@ -16,76 +16,42 @@ class UtilisateurView(ModelViewSet):
     queryset=Utilisateur.objects.all()
     serializer_class=UtilisateurSerializer
     
-    # def get(self,request,id_citoyen=None):
-    #     if id_citoyen:
-    #         try:
-    #             detail=Citoyen.objects.select_related('id_user').annotate(
-    #                             nb_demandes=Count('demande', distinct=True),
+class GestionClient(ModelViewSet):
+    queryset = Citoyen.objects.select_related('id_user').all()
+    serializer_class = CitoyenSerializer
 
-    #                             total_paiement=Sum(
-    #                                 'demande__paiement__montant'
-    #                             ),
+    def list(self, request, *args, **kwargs):
+        citoyens = Citoyen.objects.select_related(
+            'id_user',
+            'id_user__id_commune',
+            'id_user__id_arondissement'
+        ).all()
 
-    #                             derniere_demande=Max('demande__date_depot')
-    #                         )                
-    #         except Citoyen.DoesNotExist:
-    #             return Response({"message :nb_demande,totalDemande,derniere_demande non trouvé"},status=400)
-    #         serializer_detals=CitoyenDetails(detail)
-    #         return Response({serializer_detals.data},many=True)
-    #     citoyens=Citoyen.objects.select_related('id_user')
-    #     serializer=CitoyenRead(citoyens)
-    #     return Response({'citoyen':serializer.data},many=True)
-    
-    
-    
-    # def delete(self,request,id_citoyen):
-    #     try:
-    #         Citoyen.objects.filter(id_user=id_citoyen).delete()
-    #         Utilisateur.objects.filter(id_user=id_citoyen).delete()
-    #         return Response({"message":"Agent supprimé"})
-    #     except BaseException:
-    #         return Response({"message":"Erreur lors de la suppression de l'agent"},status=500)
+        data = []
+        for c in citoyens:
+            u = c.id_user
 
-    
-    # def gestion_citoyens(request):
-    #     context = {}
+            # Filtrer par l'objet Citoyen directement
+            demandes = Demande.objects.filter(id_citoyen=c)
 
-    #     context['citoyens'] = (
-    #     Citoyen.objects
-    #         .select_related('id_user')
-    #         .annotate(
-    #             nb_demandes=Count('demande', distinct=True),
+            data.append({
+                "id_user": {
+                    "id_user"         : u.id_user,
+                    "nom_user"        : u.nom_user,
+                    "prenom_user"     : u.prenom_user,
+                    "email"           : u.email,
+                    "date_inscription": str(u.date_inscription) if u.date_inscription else None,
+                    "commune"         : u.id_commune.nom_commune if u.id_commune else "N/A",
+                    "arrondissement"  : u.id_arondissement.nom_arondissement if u.id_arondissement else None,
+                },
+                "demandes": {
+                    "total"     : demandes.count(),
+                    "en_attente": demandes.filter(statut_demande='EN ATTENTE').count(),
+                    "valider"   : demandes.filter(statut_demande='VALIDER').count(),
+                    "terminer"  : demandes.filter(statut_demande='TERMINER').count(),
+                    "refuser"   : demandes.filter(statut_demande='REFUSER').count(),
+                }
+            })
 
-    #             total_paiement=Sum(
-    #                 'demande__paiement__montant'
-    #             ),
-
-    #             derniere_demande=Max('demande__date_depot')
-    #         )
-    #     )
-
-    #     return render(request, 'dash_admin/admin_citoyen/citoyenGestion.html', {'context':context})
-    # def supprimer_citoyen(id_citoyen):
-    #     Citoyen.objects.filter(id_user=id_citoyen).delete()
-    #     Utilisateur.objects.filter(id_user=id_citoyen).delete()
-    #     return redirect('gestion_citoyens')
-
-    # def modifier_citoyen(request,id_citoyen):
-    #     if request.method=='POST':
-    #         id_citoyen=request.POST.get('id_citoyen')
-    #         nom_user=request.POST.get('nom_user')
-    #         prenom_user=request.POST.get('prenom_user')
-    #         email=request.POST.get('email')
-    #         id_arondissement=request.POST.get('id_arondissement')
-
-    #         Utilisateur.objects.filter(id_user=id_citoyen).update(nom_user=nom_user,prenom_user=prenom_user,email=email,id_arondissement=id_arondissement)
-    #         Agent.objects.filter(id_user=id_citoyen).update
-    #         return redirect('gestion_agents')
-    #     citoyen=Citoyen.objects.select_related('id_user').get(id_user=id_citoyen)
-        
-    #     arrondissements = Arondissement.objects.select_related('id_commune').order_by('id_commune__nom_commune')
-
-    #     return render(request, 'dash_admin/admin_agents/update_citoyen.html', {
-    #         'citoyen': citoyen,
-    #         'arrondissements': arrondissements
-    #     })
+        return Response(data, status=200)
+            

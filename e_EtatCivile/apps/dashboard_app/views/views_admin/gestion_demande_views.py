@@ -8,6 +8,7 @@ from apps.dashboard_app.serializers import (
 from apps.dashboard_app.models import Demande,PieceJoint,Acte, ActePersonne,TypeActe
 from apps.dashboard_app.services.demande_service import construire_file_priorite, traiter_demande
 from apps.accounts_app.services import verify_jwt
+from apps.dashboard_app.models import Demande,Paiement
 
 
 class DemandeActeViews(APIView):
@@ -21,8 +22,7 @@ class DemandeActeViews(APIView):
         return Response(serializer.errors, status=400)
 
     def get(self, request, id_demande=None):
-
-        # --- GET ONE ---
+#getOne
         if id_demande is not None:
             try:
                 demande = Demande.objects.prefetch_related(
@@ -34,20 +34,17 @@ class DemandeActeViews(APIView):
                 return Response({"message": "Demande introuvable"}, status=404)
             serializer = DemandeReadSerializer(demande)
             
-            # Dans get(), après serializer = DemandeReadSerializer(demande)
-            # Dans get(), remplacez
             pieces = PieceJoint.objects.filter(id_demande=demande)
             photo_cin = None
             if pieces.exists():
                 photo_cin = pieces.first().url_fichier
 
             serializer = DemandeReadSerializer(demande)
-            data = dict(serializer.data)  # ← dict() au lieu de .copy()
+            data = dict(serializer.data)  
             data['photo_cin'] = f"http://10.210.105.55:8000/media/{photo_cin}" if photo_cin else None
 
             return Response(data, status=200)
 
-        # --- Récupérer agent depuis JWT ---
         token = (
             request.COOKIES.get('token') or
             request.headers.get('Authorization', '').replace('Bearer ', '')
@@ -60,7 +57,7 @@ class DemandeActeViews(APIView):
         id_commune = payload.get('id_commune')
         id_aro     = payload.get('id_arondissement')
 
-        # --- GET ALL filtré ---
+        # GET ALL 
         if id_commune == 1 and id_aro:
             demandes = list(
                 Demande.objects.prefetch_related('demandepersonne__personne')
@@ -140,18 +137,66 @@ class ActeDetailView(APIView):
         } for ap in acte_personnes]
         
         
-        demande_liee = Demande.objects.filter(
-            num_acte=acte.num_acte,
-            statut_demande='VALIDER'
-        ).first()
+        # Après avoir récupéré l'acte — chercher la demande liée
+        # Chercher d'abord une demande avec paiement confirmé
+        acte = Acte.objects.select_related('type_acte').get(id_acte=id_acte)
 
+        # Chercher la demande — utiliser id_demande si fourni
+        id_demande_param = request.GET.get('id_demande', None)
 
+        if id_demande_param:
+            demande_liee = Demande.objects.filter(
+                id_demande=id_demande_param
+            ).select_related('id_citoyen__id_user').first()
+        else:
+            demande_liee = Demande.objects.filter(
+                num_acte=acte.num_acte,
+            ).select_related('id_citoyen__id_user').first()
+
+        # Si pas de demande VALIDER, prendre EN ATTENTE avec paiement confirmé
+        if not demande_liee:
+            # Chercher parmi toutes les demandes celle avec paiement confirmé
+            toutes_demandes = Demande.objects.filter(
+                num_acte=acte.num_acte
+            ).select_related('id_citoyen__id_user')
+            
+            for d in toutes_demandes:
+                p = Paiement.objects.filter(
+                    id_demande=d,
+                    statut_paiement='confirme'
+                ).first()
+                if p:
+                    demande_liee = d
+                    break
+
+        paiement_ok   = False
+        id_demande    = None
+        statut        = None
+        email_citoyen = None
+
+        if demande_liee:
+            id_demande = demande_liee.id_demande
+            statut     = demande_liee.statut_demande
+            try:
+                email_citoyen = demande_liee.id_citoyen.id_user.email
+            except:
+                email_citoyen = None
+
+            paiement = Paiement.objects.filter(
+                id_demande=demande_liee,
+                statut_paiement='confirme'
+            ).first()
+            print("DEMANDE ID:", demande_liee.id_demande)
+            print("PAIEMENT:", paiement)
+            paiement_ok = paiement is not None
         return Response({
-            "id_acte"   : acte.id_acte,
-            "num_acte"  : acte.num_acte,
-            "date_acte" : str(acte.date_acte),
-            "type_acte" : libelle_type,
-            "personnes" : personnes,
-            "id_demande": demande_liee.id_demande if demande_liee else None,
-            "statut_demande": demande_liee.statut_demande if demande_liee else None,
+            "id_acte"       : acte.id_acte,
+            "num_acte"      : acte.num_acte,
+            "date_acte"     : str(acte.date_acte),
+            "type_acte"     : libelle_type,
+            "personnes"     : personnes,
+            "id_demande"    : id_demande,
+            "statut_demande": statut,
+            "email_citoyen" : email_citoyen,
+            "paiement_ok"   : paiement_ok,
         }, status=200)

@@ -76,12 +76,17 @@ def construire_file_priorite(demandes):
         heapq.heappush(heap, (d.date_depot, d))
 
     return heap
+
+
 def traiter_demande(heap):
     if not heap:
         return None
 
     _, demande = heapq.heappop(heap)
     return demande
+
+
+
 from django.utils import timezone
 from apps.dashboard_app.models import Demande
 

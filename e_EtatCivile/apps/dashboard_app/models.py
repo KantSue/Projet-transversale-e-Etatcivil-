@@ -270,7 +270,6 @@ class DemandePersonne(models.Model):
     class Meta:
         managed = False
         db_table = 'demande_personne'
-        unique_together = (('demande', 'role'),)
 
 
 class DjangoAdminLog(models.Model):

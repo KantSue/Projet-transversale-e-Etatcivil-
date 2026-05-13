@@ -29,7 +29,6 @@ class GeneratePDFView(APIView):
             id_demande=demande,
             statut_paiement='confirme'
         ).first()
-
         if not paiement:
             return Response({"error": "Paiement non confirme"}, status=403)
 
@@ -88,4 +87,65 @@ class PdfCitoyenView(APIView):
             "url_pdf"    : url_pdf,
             "num_acte"   : demande.num_acte,
             "num_demande": demande.num_demande
+        }, status=200)
+        
+from django.core.mail import send_mail
+from django.conf import settings
+
+class EnvoyerPDFView(APIView):
+    def post(self, request, id_demande):
+        token   = request.COOKIES.get('token') or \
+                  request.headers.get('Authorization', '').replace('Bearer ', '')
+        payload = verify_jwt(token) if token else None
+        if not payload:
+            return Response({"error": "Non authentifié"}, status=401)
+        if payload.get('role', '').lower() != 'agent':
+            return Response({"error": "Réservé aux agents"}, status=403)
+
+        try:
+            demande = Demande.objects.get(id_demande=id_demande)
+        except Demande.DoesNotExist:
+            return Response({"error": "Demande introuvable"}, status=404)
+
+        if not demande.url_pdf:
+            return Response({"error": "PDF non encore généré"}, status=400)
+
+        email_dest = request.data.get('email')
+        if not email_dest:
+            return Response({"error": "Email destinataire manquant"}, status=400)
+
+        # Lire le PDF
+        import os
+        from django.conf import settings as django_settings
+        pdf_path = os.path.join(django_settings.MEDIA_ROOT, demande.url_pdf)
+
+        if not os.path.exists(pdf_path):
+            return Response({"error": "Fichier PDF introuvable"}, status=404)
+
+        # Envoyer par email avec pièce jointe
+        from django.core.mail import EmailMessage
+        mail = EmailMessage(
+            subject = f"Votre acte d'état civil — {demande.num_acte}",
+            body    = (
+                f"Bonjour,\n\n"
+                f"Votre demande {demande.num_demande} a été traitée.\n"
+                f"Veuillez trouver ci-joint votre acte d'état civil.\n\n"
+                f"Cordialement,\nService État Civil"
+            ),
+            from_email    = settings.EMAIL_HOST_USER,
+            to            = [email_dest],
+        )
+        with open(pdf_path, 'rb') as f:
+            mail.attach(f"acte_{demande.num_acte}.pdf", f.read(), 'application/pdf')
+        mail.send()
+
+        # Mettre à jour statut
+        from django.utils import timezone
+        demande.statut_demande = 'TERMINER'
+        demande.date_maj       = timezone.now().date()
+        demande.save()
+
+        return Response({
+            "message": f"PDF envoyé à {email_dest}",
+            "statut" : "TERMINER"
         }, status=200)

@@ -29,7 +29,8 @@ class FileAttenteView(APIView):
 
         # Trier par date de dépôt — plus ancienne en premier
         demandes = demandes.order_by('date_depot')
-
+        print("PAYLOAD AGENT:", payload)
+        print("DEMANDES TROUVEES:", demandes.count())
         data = [{
             "id_demande"    : d.id_demande,
             "num_demande"   : d.num_demande,

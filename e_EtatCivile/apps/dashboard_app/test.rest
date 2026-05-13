@@ -1,11 +1,11 @@
 
-GET http://127.0.0.1:8000/dashboard/demandes/34/
+GET http://127.0.0.1:8000/dashboard/demandes/historique/
 Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5LCJlbWFpbCI6Imhpa29yaWFudHNvYWdsb3JpYUBnbWFpbC5jb20iLCJyb2xlIjoiQWdlbnQiLCJub20iOiJHbG9yaWEgSGlrb3JpYW50c29hIiwiaWRfYXJvbmRpc3NlbWVudCI6MSwiaWRfY29tbXVuZSI6MSwiZXhwIjoxNzc4NjQ0Mjk2fQ._82bRBt-nrUNSfu0sWSZxzApOJdIdBdYXV5KWhl1lKg
 
 
 ###
-GET http://127.0.0.1:8000/dashboard/actes/1/
+GET http://127.0.0.1:8000/dashboard/actes/21
 Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5LCJlbWFpbCI6Imhpa29yaWFudHNvYWdsb3JpYUBnbWFpbC5jb20iLCJyb2xlIjoiQWdlbnQiLCJub20iOiJHbG9yaWEgSGlrb3JpYW50c29hIiwiaWRfYXJvbmRpc3NlbWVudCI6MSwiaWRfY29tbXVuZSI6MSwiZXhwIjoxNzc4NjQ4OTcxfQ.gtNvG25GSrGXty_238TvJC7oMfmb2ZCV-fBKbkxRGEM
 
@@ -16,13 +16,24 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5LCJlb
 
 
 ###
-PUT http://127.0.0.1:8000/dashboard/agents/1
+POST http://127.0.0.1:8000/dashboard/agents/1/
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5LCJlbWFpbCI6Imhpa29yaWFudHNvYWdsb3JpYUBnbWFpbC5jb20iLCJyb2xlIjoiQWdlbnQiLCJub20iOiJHbG9yaWEgSGlrb3JpYW50c29hIiwiaWRfYXJvbmRpc3NlbWVudCI6MSwiaWRfY29tbXVuZSI6MSwiZXhwIjoxNzc4NjQ4OTcxfQ.gtNvG25GSrGXty_238TvJC7oMfmb2ZCV-fBKbkxRGEM
 
 {
     
     nom_user:"test"
 }
+###
+POST http://127.0.0.1:8000/dashboard/demandes/34/envoyer-pdf/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5LCJlbWFpbCI6Imhpa29yaWFudHNvYWdsb3JpYUBnbWFpbC5jb20iLCJyb2xlIjoiQWdlbnQiLCJub20iOiJHbG9yaWEgSGlrb3JpYW50c29hIiwiaWRfYXJvbmRpc3NlbWVudCI6NCwiaWRfY29tbXVuZSI6MSwiZXhwIjoxNzc4NzA0MzA3fQ.ZhJu7mgWFsvY207KBxHU5WZTtfKtP7MgMn7giSMkuys
+Content-Type: application/json
+
+{
+  "email": "test@gmail.com"
+}
+
+
 ###
 POST http://127.0.0.1:8000/dashboard/agents/
 Content-Type: application/json
@@ -149,7 +160,18 @@ Content-Type: application/json
     "email": "hikoriantsoagloria@gmail.com",
     "mdp_user": "vnX)74r1"
 }
+###
+GET http://127.0.0.1:8000/dashboard/arrondissements/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6Ikx1Y2llQGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbmlzdHJhdGV1ciIsIm5vbSI6Ikx1Y2llIFJha290byIsImlkX2Fyb25kaXNzZW1lbnQiOjEsImlkX2NvbW11bmUiOjEsImV4cCI6MTc3ODY4MTI1NX0.kBj2kMhHio7rpMCGEaQ1WiLATQtwKMpjqHcZ6BC1s40
+###
+PATCH http://127.0.0.1:8000/dashboard/arrondissements/1/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6Ikx1Y2llQGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbmlzdHJhdGV1ciIsIm5vbSI6Ikx1Y2llIFJha290byIsImlkX2Fyb25kaXNzZW1lbnQiOjEsImlkX2NvbW11bmUiOjEsImV4cCI6MTc3ODY4MTI1NX0.kBj2kMhHio7rpMCGEaQ1WiLATQtwKMpjqHcZ6BC1s40
+Content-Type: application/json
 
+{
+  "statut": "disponible"
+}
 ###
 POST http://127.0.0.1:8000/accounts/register/
 Content-Type: application/json
@@ -166,9 +188,15 @@ Content-Type: application/json
 
 ###
 # F7 - Tableau de bord statistiques en JSONGET http://127.0.0.1:8000/dashboard/stats/
-GET http://127.0.0.1:8000/dashboard/stats/
+GET http://127.0.0.1:8000/dashboard/citoyens/
+Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6Ikx1Y2llQGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbmlzdHJhdGV1ciIsIm5vbSI6Ikx1Y2llIFJha290byIsImlkX2Fyb25kaXNzZW1lbnQiOjEsImlkX2NvbW11bmUiOjEsImV4cCI6MTc3ODYwMzg3MX0.2cfYSkFq_Uc8fnSDUsIHH_ZA1n108HcTvR9xDtmsJCI
 
 ###
 GET http://127.0.0.1:8000/dashboard/stats/demandes-jour/
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6Ikx1Y2llQGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbmlzdHJhdGV1ciIsIm5vbSI6Ikx1Y2llIFJha290byIsImlkX2Fyb25kaXNzZW1lbnQiOjEsImlkX2NvbW11bmUiOjEsImV4cCI6MTc3ODYwMzg3MX0.2cfYSkFq_Uc8fnSDUsIHH_ZA1n108HcTvR9xDtmsJCI
+
+### GET agents
+GET http://127.0.0.1:8000/dashboard/agents/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJlbWFpbCI6Ikx1Y2llQGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbmlzdHJhdGV1ciIsIm5vbSI6Ikx1Y2llIFJha290byIsImlkX2Fyb25kaXNzZW1lbnQiOjEsImlkX2NvbW11bmUiOjEsImV4cCI6MTc3ODY4MTI1NX0.kBj2kMhHio7rpMCGEaQ1WiLATQtwKMpjqHcZ6BC1s40
+Content-Type: application/json

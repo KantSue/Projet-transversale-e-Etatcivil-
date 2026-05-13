@@ -16,4 +16,6 @@ urlpatterns = [
 
     # Communes + arrondissements (pour formulaire inscription)
     path('communes/',  views.CommunesView.as_view(),        name='communes'),
+    
+    path('mot-de-passe-oublie/', views.MotDePasseOublieView.as_view(), name='mot-de-passe-oublie'),
 ]

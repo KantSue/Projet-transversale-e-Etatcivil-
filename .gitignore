@@ -18,3 +18,6 @@ baseDeDonner/
 # OS
 Thumbs.db
 .DS_Store
+
+#mvola
+.env

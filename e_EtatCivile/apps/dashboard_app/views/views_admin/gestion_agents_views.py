@@ -8,24 +8,36 @@ from apps.dashboard_app.form import AjoutAgentForm
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from apps.dashboard_app.serializers import NbDemande_DemandeValider,AGentCreate,AgentReadSerializer
+from apps.accounts_app.services import verify_jwt
 
 
 
 class GestionAgentsAPIView(APIView):
-    def get(self,request,id_agent=None):
+    def get(self, request, id_agent=None):
         if id_agent:
             try:
-                agent=Agent.objects.select_related('id_user').get(id_user=id_agent)
+                agent = Agent.objects.select_related('id_user').get(id_user=id_agent)
             except Agent.DoesNotExist:
-                return Response({"message":"Agent non trouvé"},status=404)
+                return Response({"message": "Agent non trouvé"}, status=404)
             serializer = AgentReadSerializer(agent)
             return Response(serializer.data)
 
-        agents=Agent.objects.annotate(nb_demande=Count('demande'),
-                                        demande_valider=Count('demande',filter=Q (demande__statut_demande='validée')))
-        serializer= NbDemande_DemandeValider(agents,many=True)
-        serializer_agent=AgentReadSerializer(agents,many=True)
-        return Response({"demandes": serializer.data, "agents": serializer_agent.data})
+        # Retourner juste la liste des agents avec infos de base
+        agents = Agent.objects.select_related('id_user', 'id_user__id_arondissement').all()
+        
+        data = []
+        for a in agents:
+            u = a.id_user
+            data.append({
+                "id_agent"        : a.id_agent if hasattr(a, 'id_agent') else u.id_user,
+                "nom_user"        : u.nom_user,
+                "prenom_user"     : u.prenom_user,
+                "email"           : u.email,
+                "arrondissement"  : u.id_arondissement.nom_arondissement if u.id_arondissement else "N/A",
+                "commune"         : u.id_commune.nom_commune if u.id_commune else "N/A",
+            })
+        
+        return Response(data, status=200)
         
     def post(self,request):
         
@@ -68,6 +80,35 @@ class GestionAgentsAPIView(APIView):
   
             
 
-        
+class ArrondissementsPublicView(APIView):
+    def get(self, request):
+        token   = request.COOKIES.get('token') or \
+                  request.headers.get('Authorization', '').replace('Bearer ', '')
+        payload = verify_jwt(token) if token else None
+        if not payload:
+            return Response({"error": "Non authentifié"}, status=401)
+
+        # Récupérer la commune du citoyen depuis le JWT
+        id_commune = payload.get('id_commune')
+
+        arondissements = Arondissement.objects.select_related('id_commune').filter(
+            id_commune=id_commune
+        ) if id_commune else Arondissement.objects.select_related('id_commune').all()
+
+        # Si aucun arrondissement pour cette commune — retourner tous les disponibles
+        if not arondissements.exists():
+            arondissements = Arondissement.objects.select_related('id_commune').filter(
+                statut='disponible'
+            )
+
+        data = [{
+            "id_arondissement" : a.id_arondissement,
+            "nom_arondissement": a.nom_arondissement,
+            "num_arondissement": a.num_arondissement,
+            "statut"           : a.statut,
+            "commune"          : a.id_commune.nom_commune if a.id_commune else "N/A",
+        } for a in arondissements]
+
+        return Response(data, status=200)
 
 

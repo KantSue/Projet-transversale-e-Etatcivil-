@@ -211,38 +211,35 @@ class DemandePersonneSerializer(serializers.ModelSerializer):
     personne = PersonneSerializer(read_only=True)
 
     class Meta:
-        model  = DemandePersonne
-        fields = ['id_demande_personne', 'role', 'personne']
-        # Ne pas inclure 'demande' pour éviter la récursion
-        
+        model  = Demande
+        fields = [
+            'id_demande', 'num_demande', 'statut_demande',
+            'date_depot', 'date_maj', 'motif_refus', 'url_pdf',
+            'id_citoyen', 'id_agent', 'id_acte',
+            'id_type_acte', 'num_acte',
+            'id_arrondissement', 'id_commune',
+            # Personnes
+            'pere', 'mere', 'enfant',
+            'epoux1', 'epoux2', 'defunt',
+        ]
+        read_only_fields = ['id_agent', 'id_acte', 'num_demande'] 
 class DemandeSerializer(serializers.ModelSerializer):
      class Meta:
         model=Demande
         fields='__all__'
         
 class DemandeCreateSerializer(serializers.ModelSerializer):
-    # Personnes optionnelles selon le type
-    # Naissance
     pere   = PersonneSerializer(required=False, allow_null=True)
     mere   = PersonneSerializer(required=False, allow_null=True)
     enfant = PersonneSerializer(required=False, allow_null=True)
-    # Mariage
-    epoux1      = PersonneSerializer(required=False, allow_null=True)
-    epoux2      = PersonneSerializer(required=False, allow_null=True)
-    pere_epoux1 = PersonneSerializer(required=False, allow_null=True)
-    mere_epoux1 = PersonneSerializer(required=False, allow_null=True)
-    pere_epoux2 = PersonneSerializer(required=False, allow_null=True)
-    mere_epoux2 = PersonneSerializer(required=False, allow_null=True)
-    # Deces
-    defunt      = PersonneSerializer(required=False, allow_null=True)
-    pere_defunt = PersonneSerializer(required=False, allow_null=True)
-    mere_defunt = PersonneSerializer(required=False, allow_null=True)
+    epoux1 = PersonneSerializer(required=False, allow_null=True)
+    epoux2 = PersonneSerializer(required=False, allow_null=True)
+    defunt = PersonneSerializer(required=False, allow_null=True)
 
-    id_arrondissement = serializers.PrimaryKeyRelatedField(  # ← corriger aussi ici
-            queryset=Arondissement.objects.all(),
-            required=False, allow_null=True
-        )
-
+    id_arrondissement = serializers.PrimaryKeyRelatedField(
+        queryset=Arondissement.objects.all(),
+        required=False, allow_null=True
+    )
 
     class Meta:
         model  = Demande
@@ -250,11 +247,10 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id_agent', 'id_acte', 'num_demande']
 
     def validate(self, data):
-        type_acte  = data.get('id_type_acte')
-        id_commune = data.get('id_commune')
+        type_acte         = data.get('id_type_acte')
+        id_commune        = data.get('id_commune')
         id_arrondissement = data.get('id_arrondissement')
 
-        # Arrondissement obligatoire pour Antananarivo
         if id_commune and id_commune.id_commune == 1 and not id_arrondissement:
             raise serializers.ValidationError(
                 "L'arrondissement est obligatoire pour Antananarivo."
@@ -265,8 +261,7 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
 
         libelle = type_acte.libelle.lower()
 
-        # Validation naissance
-        if libelle == 'acte naissance':
+        if 'naissance' in libelle:
             if not data.get('enfant'):
                 raise serializers.ValidationError("L'enfant est obligatoire.")
             enfant_dn = data['enfant'].get('date_naissance')
@@ -278,15 +273,9 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "La date de naissance de la mère doit être antérieure à celle de l'enfant."
                 )
-
-        # Validation mariage
-        elif libelle == 'acte mariage':
+        elif 'mariage' in libelle:
             if not data.get('epoux1') or not data.get('epoux2'):
-                raise serializers.ValidationError(
-                    "Les deux époux sont obligatoires."
-                )
-
-        # Validation décès
+                raise serializers.ValidationError("Les deux époux sont obligatoires.")
         elif 'deces' in libelle or 'décès' in libelle:
             if not data.get('defunt'):
                 raise serializers.ValidationError("Le défunt est obligatoire.")
@@ -294,24 +283,37 @@ class DemandeCreateSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        # Extraire toutes les personnes
-        personnes_roles = {
-            'pere'       : validated_data.pop('pere',        None),
-            'mere'       : validated_data.pop('mere',        None),
-            'enfant'     : validated_data.pop('enfant',      None),
-            'epoux1'     : validated_data.pop('epoux1',      None),
-            'epoux2'     : validated_data.pop('epoux2',      None),
-            'defunt'     : validated_data.pop('defunt',      None),
-        }
+        # 1. Extraire toutes les personnes
+        champs_personnes = ['pere', 'mere', 'enfant', 'epoux1', 'epoux2', 'defunt']
+        personnes_roles  = {}
+        for champ in champs_personnes:
+            personnes_roles[champ] = validated_data.pop(champ, None)
 
-        validated_data['num_demande'] = generer_num_demande()
-        validated_data.setdefault('statut_demande', 'en attente')
+        # 2. Retirer les champs non liés au modèle Demande
+        champs_extra = [
+            'nb_exemplaires', 'numero_tel',
+            'pere_epoux1', 'mere_epoux1',
+            'pere_epoux2', 'mere_epoux2',
+            'pere_defunt', 'mere_defunt',
+        ]
+        for champ in champs_extra:
+            validated_data.pop(champ, None)
 
+        # 3. Forcer les valeurs
+        validated_data['num_demande']    = generer_num_demande()
+        validated_data['statut_demande'] = 'EN ATTENTE'
+
+        # 4. Debug
+        print("VALIDATED DATA AVANT CREATE:", list(validated_data.keys()))
+        print("PERSONNES ROLES:", {k: bool(v) for k, v in personnes_roles.items()})
+
+        # 5. Créer la demande
         demande = Demande.objects.create(**validated_data)
 
-        # Créer personne + demande_personne pour chaque rôle
+        # 6. Créer les personnes
         for role, data in personnes_roles.items():
-            if data:
+            if data and isinstance(data, dict) and role and role.strip():
+                print(f"CREATION PERSONNE role={role} data={data}")
                 personne = Personne.objects.create(**data)
                 DemandePersonne.objects.create(
                     demande  = demande,
