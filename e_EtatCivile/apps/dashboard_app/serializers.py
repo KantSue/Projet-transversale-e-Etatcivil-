@@ -211,18 +211,9 @@ class DemandePersonneSerializer(serializers.ModelSerializer):
     personne = PersonneSerializer(read_only=True)
 
     class Meta:
-        model  = Demande
-        fields = [
-            'id_demande', 'num_demande', 'statut_demande',
-            'date_depot', 'date_maj', 'motif_refus', 'url_pdf',
-            'id_citoyen', 'id_agent', 'id_acte',
-            'id_type_acte', 'num_acte',
-            'id_arrondissement', 'id_commune',
-            # Personnes
-            'pere', 'mere', 'enfant',
-            'epoux1', 'epoux2', 'defunt',
-        ]
-        read_only_fields = ['id_agent', 'id_acte', 'num_demande'] 
+        model  = DemandePersonne
+        fields = ['id_demande_personne', 'role', 'personne']
+        
 class DemandeSerializer(serializers.ModelSerializer):
      class Meta:
         model=Demande

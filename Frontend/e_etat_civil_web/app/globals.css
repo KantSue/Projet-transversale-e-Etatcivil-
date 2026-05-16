@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-navy-700: #1a3a6b;
+  --color-navy-800: #122850;
+  --color-navy-900: #0a1830;
+  --color-gold-300: #fcd34d;
+  --color-gold-500: #f0b429;
+}
+
+
+body {
+  background: linear-gradient(135deg, #0a1830 0%, #1a3a6b 50%, #0f172a 100%);
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  color: #ffffff;
+}

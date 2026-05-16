@@ -26,7 +26,12 @@ SECRET_KEY = 'django-insecure-oqq(y2@e-zi@42k4lv4^sg=opb&ykaflc53p47lhd4lh87$_a4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.210.105.55']
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '10.167.229.55',
+    '10.210.105.55',  # ancienne IP, garder au cas où
+]
 
 
 # Application definition
@@ -38,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'apps.accounts_app',
     'apps.home_app',
     'apps.dashboard_app',
@@ -52,9 +58,18 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',   
+    'corsheaders.middleware.CorsMiddleware',  # ← en premier
+    'django.middleware.common.CommonMiddleware',
+    
 ]
-
+CORS_ALLOWED_ORIGINS=[
+    'http://192.168.56.1:3000',
+    'http://10.210.105.55:3000',
+    'http://192.168.56.1:3000',
+    'http://localhost:3000',
+    
+]
 ROOT_URLCONF = 'e_EC_project.urls'
 
 TEMPLATES = [
